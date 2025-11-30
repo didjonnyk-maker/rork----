@@ -13,11 +13,15 @@ import {
   Plus,
   Repeat,
   Star,
+  Trash2,
   User as UserIcon,
+  Zap,
 } from "lucide-react-native";
 import { useMemo } from "react";
 import {
+  Alert,
   FlatList,
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -28,7 +32,7 @@ import { useApp } from "@/providers/AppProvider";
 
 export default function ManagementScreen() {
   const router = useRouter();
-  const { currentUser, shifts, logout, getUnfilledShiftsWarning } = useApp();
+  const { currentUser, shifts, logout, getUnfilledShiftsWarning, deleteShift, updateShift } = useApp();
 
   const unfilledCount = getUnfilledShiftsWarning();
 
@@ -43,6 +47,27 @@ export default function ManagementScreen() {
   const handleLogout = () => {
     logout();
     router.replace("/" as never);
+  };
+
+  const handleDeleteShift = (shiftId: string) => {
+    if (Platform.OS === "web") {
+      if (confirm("Вы уверены, что хотите удалить эту смену?")) {
+        deleteShift(shiftId);
+      }
+    } else {
+      Alert.alert(
+        "Удаление смены",
+        "Вы уверены, что хотите удалить эту смену?",
+        [
+          { text: "Отмена", style: "cancel" },
+          { text: "Удалить", style: "destructive", onPress: () => deleteShift(shiftId) },
+        ]
+      );
+    }
+  };
+
+  const handleToggleUrgent = (shiftId: string, currentUrgent?: boolean) => {
+    updateShift(shiftId, { isUrgent: !currentUrgent });
   };
 
   const formatDate = (dateStr: string) => {
@@ -189,11 +214,17 @@ export default function ManagementScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
           renderItem={({ item }) => (
-            <View style={styles.shiftCard}>
+            <View style={[styles.shiftCard, item.isUrgent && styles.shiftCardUrgent]}>
               <View style={styles.shiftHeader}>
                 <View style={styles.dateSection}>
                   <Calendar size={16} color="#6B7280" strokeWidth={2} />
                   <Text style={styles.shiftDate}>{formatDate(item.date)}</Text>
+                  {item.isUrgent && (
+                    <View style={styles.urgentBadge}>
+                      <Zap size={12} color="#FFFFFF" strokeWidth={2} fill="#FFFFFF" />
+                      <Text style={styles.urgentText}>Срочно</Text>
+                    </View>
+                  )}
                 </View>
                 <View
                   style={[
@@ -235,6 +266,26 @@ export default function ManagementScreen() {
                     <Text style={styles.employeeName}>{item.employeeName}</Text>
                   </View>
                 )}
+              </View>
+
+              <View style={styles.shiftActions}>
+                <TouchableOpacity
+                  style={[styles.actionButton, styles.urgentButton, item.isUrgent && styles.urgentButtonActive]}
+                  onPress={() => handleToggleUrgent(item.id, item.isUrgent)}
+                >
+                  <Zap size={16} color={item.isUrgent ? "#FFFFFF" : "#F59E0B"} strokeWidth={2} />
+                  <Text style={[styles.actionButtonText, item.isUrgent ? { color: "#FFFFFF" } : { color: "#F59E0B" }]}>
+                    {item.isUrgent ? "Срочно!" : "Срочно"}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.actionButton, styles.deleteButton]}
+                  onPress={() => handleDeleteShift(item.id)}
+                >
+                  <Trash2 size={16} color="#DC2626" strokeWidth={2} />
+                  <Text style={[styles.actionButtonText, { color: "#DC2626" }]}>Удалить</Text>
+                </TouchableOpacity>
               </View>
             </View>
           )}
@@ -411,6 +462,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E5E7EB",
   },
+  shiftCardUrgent: {
+    borderColor: "#F59E0B",
+    backgroundColor: "#FFFBEB",
+  },
   shiftHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -424,6 +479,20 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+  },
+  urgentBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#F59E0B",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  urgentText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
   shiftDate: {
     fontSize: 16,
@@ -480,5 +549,39 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600" as const,
     color: "#2563EB",
+  },
+  shiftActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 8,
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#E5E7EB",
+  },
+  actionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  urgentButton: {
+    borderColor: "#F59E0B",
+    backgroundColor: "#FFFBEB",
+  },
+  urgentButtonActive: {
+    backgroundColor: "#F59E0B",
+    borderColor: "#F59E0B",
+  },
+  deleteButton: {
+    borderColor: "#FEE2E2",
+    backgroundColor: "#FEF2F2",
+  },
+  actionButtonText: {
+    fontSize: 12,
+    fontWeight: "600",
   },
 });

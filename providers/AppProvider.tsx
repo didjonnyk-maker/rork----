@@ -9,6 +9,7 @@ import {
   EmployeeTrainingProgress,
   KPISettings,
   Penalty,
+  SalaryPayment,
   Shift,
   ShiftHistory,
   ShiftReplacement,
@@ -39,6 +40,7 @@ const STORAGE_KEYS = {
   REPLACEMENTS: "@tabel_replacements",
   TRAINING_MATERIALS: "@tabel_training_materials",
   TRAINING_PROGRESS: "@tabel_training_progress",
+  SALARY_PAYMENTS: "@tabel_salary_payments",
 };
 
 export const [AppProvider, useApp] = createContextHook(() => {
@@ -62,6 +64,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
   const [replacements, setReplacements] = useState<ShiftReplacement[]>([]);
   const [trainingMaterials, setTrainingMaterials] = useState<TrainingMaterial[]>([]);
   const [trainingProgress, setTrainingProgress] = useState<EmployeeTrainingProgress[]>([]);
+  const [salaryPayments, setSalaryPayments] = useState<SalaryPayment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -85,6 +88,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
         replacementsData,
         trainingMaterialsData,
         trainingProgressData,
+        salaryPaymentsData,
       ] = await Promise.all([
         AsyncStorage.getItem(STORAGE_KEYS.USERS),
         AsyncStorage.getItem(STORAGE_KEYS.SHIFTS),
@@ -100,6 +104,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
         AsyncStorage.getItem(STORAGE_KEYS.REPLACEMENTS),
         AsyncStorage.getItem(STORAGE_KEYS.TRAINING_MATERIALS),
         AsyncStorage.getItem(STORAGE_KEYS.TRAINING_PROGRESS),
+        AsyncStorage.getItem(STORAGE_KEYS.SALARY_PAYMENTS),
       ]);
 
       if (usersData) setUsers(JSON.parse(usersData));
@@ -116,6 +121,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
       if (replacementsData) setReplacements(JSON.parse(replacementsData));
       if (trainingMaterialsData) setTrainingMaterials(JSON.parse(trainingMaterialsData));
       if (trainingProgressData) setTrainingProgress(JSON.parse(trainingProgressData));
+      if (salaryPaymentsData) setSalaryPayments(JSON.parse(salaryPaymentsData));
     } catch (error) {
       console.error("Error loading data:", error);
     } finally {
@@ -186,6 +192,15 @@ export const [AppProvider, useApp] = createContextHook(() => {
     }
   }, []);
 
+  const saveSalaryPayments = useCallback(async (newPayments: SalaryPayment[]) => {
+    try {
+      await AsyncStorage.setItem(STORAGE_KEYS.SALARY_PAYMENTS, JSON.stringify(newPayments));
+      setSalaryPayments(newPayments);
+    } catch (error) {
+      console.error("Error saving salary payments:", error);
+    }
+  }, []);
+
   const login = useCallback(async (user: User) => {
     try {
       await AsyncStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
@@ -233,6 +248,14 @@ export const [AppProvider, useApp] = createContextHook(() => {
   const addShifts = useCallback(
     (newShiftsList: Shift[]) => {
       const newShifts = [...shifts, ...newShiftsList];
+      saveShifts(newShifts);
+    },
+    [shifts, saveShifts]
+  );
+
+  const deleteShift = useCallback(
+    (shiftId: string) => {
+      const newShifts = shifts.filter((s) => s.id !== shiftId);
       saveShifts(newShifts);
     },
     [shifts, saveShifts]
@@ -828,6 +851,14 @@ export const [AppProvider, useApp] = createContextHook(() => {
     [shifts, saveShifts, addPenalty]
   );
 
+  const addSalaryPayment = useCallback(
+    (payment: SalaryPayment) => {
+      const newPayments = [...salaryPayments, payment];
+      saveSalaryPayments(newPayments);
+    },
+    [salaryPayments, saveSalaryPayments]
+  );
+
   const calculateEmployeeSalary = useCallback(
     (employeeId: string, periodStart: string, periodEnd: string) => {
       const user = users.find((u) => u.id === employeeId);
@@ -872,6 +903,14 @@ export const [AppProvider, useApp] = createContextHook(() => {
       );
       const totalAdvances = employeeAdvances.reduce((sum, a) => sum + a.amount, 0);
 
+      const employeePayments = salaryPayments.filter(
+        (p) =>
+          p.employeeId === employeeId &&
+          p.periodStart === periodStart &&
+          p.periodEnd === periodEnd
+      );
+      const paidAmount = employeePayments.reduce((sum, p) => sum + p.amount, 0);
+
       let shortages = 0;
       employeeHistory.forEach((h) => {
         if (h.report) {
@@ -881,6 +920,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
       });
 
       const totalPayout = adjustedAmount - totalPenalties - shortages - totalAdvances;
+      const remainingAmount = Math.max(0, totalPayout - paidAmount);
 
       return {
         employeeId,
@@ -895,9 +935,11 @@ export const [AppProvider, useApp] = createContextHook(() => {
         advances: totalAdvances,
         totalPayout: Math.max(0, totalPayout),
         period: `${periodStart} - ${periodEnd}`,
+        paidAmount,
+        remainingAmount,
       };
     },
-    [users, history, penalties, advances, getEmployeeKPI, calculateKPICoefficient]
+    [users, history, penalties, advances, salaryPayments, getEmployeeKPI, calculateKPICoefficient]
   );
 
   const getShiftsRequiringArrival = useCallback(() => {
@@ -1115,5 +1157,8 @@ export const [AppProvider, useApp] = createContextHook(() => {
     isTrainingComplete,
     getNextShiftForEmployee,
     canCloseShift,
+    deleteShift,
+    addSalaryPayment,
+    salaryPayments,
   };
 });

@@ -45,6 +45,7 @@ export interface Shift {
   employeeName?: string;
   arrivedAt?: string;
   employeeStatus?: EmployeeStatus;
+  isUrgent?: boolean;
 }
 
 export interface ShiftTemplate {
@@ -117,6 +118,17 @@ export interface Task {
   directorComment?: string;
 }
 
+export interface SalaryPayment {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  amount: number;
+  date: string;
+  periodStart: string;
+  periodEnd: string;
+  paidBy: string;
+}
+
 export interface Advance {
   id: string;
   employeeId: string;
@@ -166,6 +178,8 @@ export interface SalaryCalculation {
   advances: number;
   totalPayout: number;
   period: string;
+  paidAmount: number;
+  remainingAmount: number;
 }
 
 export interface Penalty {

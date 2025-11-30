@@ -28,6 +28,8 @@ export default function FinanceScreen() {
     penalties,
     calculateEmployeeSalary,
     addAdvance,
+    addPenalty,
+    addSalaryPayment,
     currentUser,
   } = useApp();
 
@@ -43,6 +45,9 @@ export default function FinanceScreen() {
   });
   const [advanceEmployeeId, setAdvanceEmployeeId] = useState("");
   const [advanceAmount, setAdvanceAmount] = useState("");
+  const [penaltyEmployeeId, setPenaltyEmployeeId] = useState("");
+  const [penaltyAmount, setPenaltyAmount] = useState("");
+  const [penaltyReason, setPenaltyReason] = useState("");
 
   const employees = useMemo(
     () => users.filter((u) => EMPLOYEE_POSITIONS.includes(u.position as typeof EMPLOYEE_POSITIONS[number])),
@@ -101,6 +106,79 @@ export default function FinanceScreen() {
     } else {
       Alert.alert("Успешно", successMsg);
     }
+  };
+
+  const handleAddPenalty = () => {
+    if (!penaltyEmployeeId || !penaltyAmount || !penaltyReason) {
+      const msg = "Заполните все поля (сотрудник, сумма, причина)";
+      if (Platform.OS === "web") {
+        alert(msg);
+      } else {
+        Alert.alert("Ошибка", msg);
+      }
+      return;
+    }
+
+    const employee = employees.find((e) => e.id === penaltyEmployeeId);
+    if (!employee) return;
+
+    const penalty = {
+      id: Date.now().toString(),
+      employeeId: penaltyEmployeeId,
+      employeeName: employee.name,
+      amount: parseFloat(penaltyAmount),
+      reason: penaltyReason,
+      date: new Date().toISOString(),
+      createdBy: currentUser?.name || "Администратор",
+    };
+
+    addPenalty(penalty);
+    setPenaltyEmployeeId("");
+    setPenaltyAmount("");
+    setPenaltyReason("");
+
+    const successMsg = "Штраф успешно добавлен!";
+    if (Platform.OS === "web") {
+      alert(successMsg);
+    } else {
+      Alert.alert("Успешно", successMsg);
+    }
+  };
+
+  const handlePaySalary = (salary: SalaryCalculation) => {
+    if (salary.remainingAmount <= 0) {
+      const msg = "Нет суммы к выплате";
+      if (Platform.OS === "web") {
+        alert(msg);
+      } else {
+        Alert.alert("Ошибка", msg);
+      }
+      return;
+    }
+
+    Alert.alert(
+      "Подтверждение выплаты",
+      `Выплатить ${formatCurrency(salary.remainingAmount)} сотруднику ${salary.employeeName}?`,
+      [
+        { text: "Отмена", style: "cancel" },
+        {
+          text: "Выплатить",
+          onPress: () => {
+            const payment = {
+              id: Date.now().toString(),
+              employeeId: salary.employeeId,
+              employeeName: salary.employeeName,
+              amount: salary.remainingAmount,
+              date: new Date().toISOString(),
+              periodStart: periodStart,
+              periodEnd: periodEnd,
+              paidBy: currentUser?.name || "Директор",
+            };
+            addSalaryPayment(payment);
+          },
+        },
+      ]
+    );
   };
 
   const formatDate = (dateStr: string) => {
@@ -175,9 +253,30 @@ export default function FinanceScreen() {
         )}
 
         <View style={styles.totalRow}>
-          <Text style={styles.totalLabel}>К выплате:</Text>
+          <Text style={styles.totalLabel}>Всего начислено:</Text>
           <Text style={styles.totalValue}>{formatCurrency(salary.totalPayout)}</Text>
         </View>
+
+        <View style={styles.paymentStatusRow}>
+          <View>
+            <Text style={styles.detailLabel}>Выплачено:</Text>
+            <Text style={[styles.detailValue, { color: "#15803D" }]}>{formatCurrency(salary.paidAmount)}</Text>
+          </View>
+          <View>
+            <Text style={styles.detailLabel}>К оплате:</Text>
+            <Text style={[styles.totalValue, { fontSize: 18 }]}>{formatCurrency(salary.remainingAmount)}</Text>
+          </View>
+        </View>
+
+        {salary.remainingAmount > 0 && (
+          <TouchableOpacity
+            style={styles.payButton}
+            onPress={() => handlePaySalary(salary)}
+          >
+            <Banknote size={16} color="#FFFFFF" strokeWidth={2} />
+            <Text style={styles.payButtonText}>Выплатить остаток</Text>
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -350,6 +449,75 @@ export default function FinanceScreen() {
 
       {selectedTab === "penalties" && (
         <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+          <View style={styles.addAdvanceCard}>
+            <Text style={styles.addAdvanceTitle}>Добавить штраф</Text>
+
+            <View style={styles.advanceForm}>
+              <View style={styles.selectContainer}>
+                <Text style={styles.inputLabel}>Сотрудник</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  <View style={styles.employeeChips}>
+                    {employees.map((emp) => (
+                      <TouchableOpacity
+                        key={emp.id}
+                        style={[
+                          styles.employeeChip,
+                          penaltyEmployeeId === emp.id && styles.employeeChipActive,
+                        ]}
+                        onPress={() => setPenaltyEmployeeId(emp.id)}
+                      >
+                        <Text
+                          style={[
+                            styles.employeeChipText,
+                            penaltyEmployeeId === emp.id && styles.employeeChipTextActive,
+                          ]}
+                        >
+                          {emp.name}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </ScrollView>
+              </View>
+
+              <View style={styles.amountContainer}>
+                <Text style={styles.inputLabel}>Сумма штрафа (сом)</Text>
+                <TextInput
+                  style={styles.amountInput}
+                  value={penaltyAmount}
+                  onChangeText={setPenaltyAmount}
+                  placeholder="0.00"
+                  placeholderTextColor="#9CA3AF"
+                  keyboardType="decimal-pad"
+                />
+              </View>
+
+              <View style={styles.amountContainer}>
+                <Text style={styles.inputLabel}>Причина</Text>
+                <TextInput
+                  style={styles.amountInput}
+                  value={penaltyReason}
+                  onChangeText={setPenaltyReason}
+                  placeholder="Опоздание, нарушение и т.д."
+                  placeholderTextColor="#9CA3AF"
+                />
+              </View>
+
+              <TouchableOpacity
+                style={[
+                  styles.addAdvanceButton,
+                  { backgroundColor: "#DC2626" },
+                  (!penaltyEmployeeId || !penaltyAmount || !penaltyReason) && styles.addAdvanceButtonDisabled,
+                ]}
+                onPress={handleAddPenalty}
+                disabled={!penaltyEmployeeId || !penaltyAmount || !penaltyReason}
+              >
+                <TrendingDown size={18} color="#FFFFFF" strokeWidth={2} />
+                <Text style={styles.addAdvanceButtonText}>Наложить штраф</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
           <Text style={styles.listTitle}>История штрафов</Text>
           {sortedPenalties.map((penalty) => (
             <View key={penalty.id} style={styles.penaltyCard}>
@@ -584,6 +752,30 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700" as const,
     color: "#15803D",
+  },
+  paymentStatusRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#E5E7EB",
+  },
+  payButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#15803D",
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginTop: 12,
+  },
+  payButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
   },
   addAdvanceCard: {
     backgroundColor: "#FFFFFF",

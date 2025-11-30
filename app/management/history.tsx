@@ -4,11 +4,12 @@ import {
   Clock,
   User as UserIcon,
 } from "lucide-react-native";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   FlatList,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -17,13 +18,28 @@ import { useApp } from "@/providers/AppProvider";
 export default function HistoryScreen() {
   const { history } = useApp();
 
+  const [periodStart, setPeriodStart] = useState(() => {
+    const date = new Date();
+    date.setDate(1);
+    return date.toISOString().split("T")[0];
+  });
+  const [periodEnd, setPeriodEnd] = useState(() => {
+    const date = new Date();
+    return date.toISOString().split("T")[0];
+  });
+
   const sortedHistory = useMemo(
     () =>
-      [...history].sort(
-        (a, b) =>
-          new Date(b.closedAt).getTime() - new Date(a.closedAt).getTime()
-      ),
-    [history]
+      [...history]
+        .filter((item) => {
+          const itemDate = item.shift.date;
+          return itemDate >= periodStart && itemDate <= periodEnd;
+        })
+        .sort(
+          (a, b) =>
+            new Date(b.closedAt).getTime() - new Date(a.closedAt).getTime()
+        ),
+    [history, periodStart, periodEnd]
   );
 
   const formatDate = (dateStr: string) => {
@@ -48,6 +64,32 @@ export default function HistoryScreen() {
         <Text style={styles.headerSubtitle}>
           Всего записей: {sortedHistory.length}
         </Text>
+      </View>
+
+      <View style={styles.periodSection}>
+        <View style={styles.periodInputs}>
+          <View style={styles.periodInput}>
+            <Calendar size={16} color="#6B7280" strokeWidth={2} />
+            <TextInput
+              style={styles.dateInput}
+              value={periodStart}
+              onChangeText={setPeriodStart}
+              placeholder="ГГГГ-ММ-ДД"
+              placeholderTextColor="#9CA3AF"
+            />
+          </View>
+          <Text style={styles.periodSeparator}>—</Text>
+          <View style={styles.periodInput}>
+            <Calendar size={16} color="#6B7280" strokeWidth={2} />
+            <TextInput
+              style={styles.dateInput}
+              value={periodEnd}
+              onChangeText={setPeriodEnd}
+              placeholder="ГГГГ-ММ-ДД"
+              placeholderTextColor="#9CA3AF"
+            />
+          </View>
+        </View>
       </View>
 
       {sortedHistory.length === 0 ? (
@@ -183,6 +225,39 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#6B7280",
     marginTop: 2,
+  },
+  periodSection: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: "#FFFFFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+  },
+  periodInputs: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  periodInput: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#F9FAFB",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  dateInput: {
+    flex: 1,
+    fontSize: 14,
+    color: "#111827",
+  },
+  periodSeparator: {
+    fontSize: 16,
+    color: "#6B7280",
   },
   emptyState: {
     flex: 1,
