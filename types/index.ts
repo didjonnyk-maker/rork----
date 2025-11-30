@@ -217,6 +217,7 @@ export interface TrainingMaterial {
   category: string;
   type: TrainingMaterialType;
   fileUrl?: string;
+  link?: string;
   version: number;
   createdAt: string;
   updatedAt: string;

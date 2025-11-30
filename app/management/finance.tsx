@@ -42,7 +42,9 @@ export default function FinanceScreen() {
   });
   const [periodEnd, setPeriodEnd] = useState(() => {
     const date = new Date();
-    return date.toISOString().split("T")[0];
+    // End of current month
+    const nextMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+    return nextMonth.toISOString().split("T")[0];
   });
   const [advanceEmployeeId, setAdvanceEmployeeId] = useState("");
   const [advanceAmount, setAdvanceAmount] = useState("");

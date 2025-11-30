@@ -9,10 +9,12 @@ import {
   FlatList,
   StyleSheet,
   Text,
-  TextInput,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Stack } from "expo-router";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { useApp } from "@/providers/AppProvider";
 
 export default function HistoryScreen() {
@@ -20,13 +22,32 @@ export default function HistoryScreen() {
 
   const [periodStart, setPeriodStart] = useState(() => {
     const date = new Date();
-    date.setDate(1);
+    date.setDate(1); // First day of current month
     return date.toISOString().split("T")[0];
   });
   const [periodEnd, setPeriodEnd] = useState(() => {
     const date = new Date();
-    return date.toISOString().split("T")[0];
+    // Last day of current month
+    const nextMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0); 
+    return nextMonth.toISOString().split("T")[0];
   });
+  
+  const [showStartPicker, setShowStartPicker] = useState(false);
+  const [showEndPicker, setShowEndPicker] = useState(false);
+
+  const onStartChange = (event: any, selectedDate?: Date) => {
+    setShowStartPicker(false);
+    if (selectedDate) {
+      setPeriodStart(selectedDate.toISOString().split("T")[0]);
+    }
+  };
+
+  const onEndChange = (event: any, selectedDate?: Date) => {
+    setShowEndPicker(false);
+    if (selectedDate) {
+      setPeriodEnd(selectedDate.toISOString().split("T")[0]);
+    }
+  };
 
   const sortedHistory = useMemo(
     () =>
@@ -59,6 +80,7 @@ export default function HistoryScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["bottom"]}>
+      <Stack.Screen options={{ title: "История смен", headerTitle: "История смен" }} />
       <View style={styles.header}>
         <Text style={styles.headerTitle}>История смен</Text>
         <Text style={styles.headerSubtitle}>
@@ -68,27 +90,39 @@ export default function HistoryScreen() {
 
       <View style={styles.periodSection}>
         <View style={styles.periodInputs}>
-          <View style={styles.periodInput}>
+          <TouchableOpacity 
+            style={styles.periodInput}
+            onPress={() => setShowStartPicker(true)}
+          >
             <Calendar size={16} color="#6B7280" strokeWidth={2} />
-            <TextInput
-              style={styles.dateInput}
-              value={periodStart}
-              onChangeText={setPeriodStart}
-              placeholder="ГГГГ-ММ-ДД"
-              placeholderTextColor="#9CA3AF"
+            <Text style={styles.dateInput}>{periodStart}</Text>
+          </TouchableOpacity>
+          {showStartPicker && (
+            <DateTimePicker
+              value={new Date(periodStart)}
+              mode="date"
+              display="default"
+              onChange={onStartChange}
             />
-          </View>
+          )}
+
           <Text style={styles.periodSeparator}>—</Text>
-          <View style={styles.periodInput}>
+          
+          <TouchableOpacity 
+            style={styles.periodInput}
+            onPress={() => setShowEndPicker(true)}
+          >
             <Calendar size={16} color="#6B7280" strokeWidth={2} />
-            <TextInput
-              style={styles.dateInput}
-              value={periodEnd}
-              onChangeText={setPeriodEnd}
-              placeholder="ГГГГ-ММ-ДД"
-              placeholderTextColor="#9CA3AF"
+            <Text style={styles.dateInput}>{periodEnd}</Text>
+          </TouchableOpacity>
+          {showEndPicker && (
+            <DateTimePicker
+              value={new Date(periodEnd)}
+              mode="date"
+              display="default"
+              onChange={onEndChange}
             />
-          </View>
+          )}
         </View>
       </View>
 

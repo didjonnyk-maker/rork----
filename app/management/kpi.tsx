@@ -4,15 +4,11 @@ import {
   BookOpen,
   CheckSquare,
   Clock,
-  Save,
-  Settings,
   Target,
   User as UserIcon,
 } from "lucide-react-native";
 import React, { useMemo, useState } from "react";
 import {
-  Alert,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -21,21 +17,18 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useApp } from "@/providers/AppProvider";
-import { EMPLOYEE_POSITIONS, EmployeeKPI, KPISettings } from "@/types";
+import { EMPLOYEE_POSITIONS, EmployeeKPI } from "@/types";
 
 export default function KPIScreen() {
   const {
     users,
-    kpiSettings,
-    updateKpiSettings,
     updateEmployeeKPI,
     getEmployeeKPI,
     calculateKPICoefficient,
     currentUser,
   } = useApp();
 
-  const [selectedTab, setSelectedTab] = useState<"settings" | "employees">("employees");
-  const [localSettings, setLocalSettings] = useState<KPISettings>(kpiSettings);
+  const [selectedTab, setSelectedTab] = useState<"employees">("employees");
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
 
   const employees = useMemo(
@@ -44,33 +37,6 @@ export default function KPIScreen() {
   );
 
   const isDirector = currentUser?.role === "Директор";
-
-  const handleSaveSettings = () => {
-    const total =
-      localSettings.disciplineWeight +
-      localSettings.cashAccuracyWeight +
-      localSettings.noComplaintsWeight +
-      localSettings.trainingWeight +
-      localSettings.tasksWeight;
-
-    if (Math.abs(total - 1) > 0.01) {
-      const msg = `Сумма весов должна равняться 1.0 (100%). Текущая сумма: ${(total * 100).toFixed(0)}%`;
-      if (Platform.OS === "web") {
-        alert(msg);
-      } else {
-        Alert.alert("Ошибка", msg);
-      }
-      return;
-    }
-
-    updateKpiSettings(localSettings);
-    const successMsg = "Настройки KPI сохранены!";
-    if (Platform.OS === "web") {
-      alert(successMsg);
-    } else {
-      Alert.alert("Успешно", successMsg);
-    }
-  };
 
   const handleUpdateEmployeeKPI = (employeeId: string, field: keyof EmployeeKPI, value: number) => {
     const currentKPI = getEmployeeKPI(employeeId) || {
@@ -87,38 +53,6 @@ export default function KPIScreen() {
     const coefficient = calculateKPICoefficient(updatedKPI);
     updateEmployeeKPI(employeeId, { ...updatedKPI, coefficient });
   };
-
-  const renderSettingsSlider = (
-    label: string,
-    icon: React.ReactNode,
-    field: keyof KPISettings,
-    value: number
-  ) => (
-    <View style={styles.settingItem}>
-      <View style={styles.settingHeader}>
-        {icon}
-        <Text style={styles.settingLabel}>{label}</Text>
-        <Text style={styles.settingValue}>{(value * 100).toFixed(0)}%</Text>
-      </View>
-      <View style={styles.sliderContainer}>
-        <TouchableOpacity
-          style={styles.sliderButton}
-          onPress={() => setLocalSettings({ ...localSettings, [field]: Math.max(0, value - 0.05) })}
-        >
-          <Text style={styles.sliderButtonText}>−</Text>
-        </TouchableOpacity>
-        <View style={styles.sliderTrack}>
-          <View style={[styles.sliderFill, { width: `${value * 100}%` }]} />
-        </View>
-        <TouchableOpacity
-          style={styles.sliderButton}
-          onPress={() => setLocalSettings({ ...localSettings, [field]: Math.min(1, value + 0.05) })}
-        >
-          <Text style={styles.sliderButtonText}>+</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
 
   const renderEmployeeKPICard = (employeeId: string) => {
     const employee = employees.find((e) => e.id === employeeId);
@@ -299,17 +233,6 @@ export default function KPIScreen() {
             Сотрудники
           </Text>
         </TouchableOpacity>
-        {isDirector && (
-          <TouchableOpacity
-            style={[styles.tab, selectedTab === "settings" && styles.tabActive]}
-            onPress={() => setSelectedTab("settings")}
-          >
-            <Settings size={18} color={selectedTab === "settings" ? "#FFFFFF" : "#6B7280"} strokeWidth={2} />
-            <Text style={[styles.tabText, selectedTab === "settings" && styles.tabTextActive]}>
-              Настройки весов
-            </Text>
-          </TouchableOpacity>
-        )}
       </View>
 
       {selectedTab === "employees" && (
@@ -331,89 +254,6 @@ export default function KPIScreen() {
               <Text style={styles.emptyText}>Добавьте сотрудников для управления KPI</Text>
             </View>
           )}
-        </ScrollView>
-      )}
-
-      {selectedTab === "settings" && isDirector && (
-        <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-          <View style={styles.settingsCard}>
-            <Text style={styles.settingsTitle}>Веса показателей KPI</Text>
-            <Text style={styles.settingsSubtitle}>
-              Сумма всех весов должна равняться 100%
-            </Text>
-
-            {renderSettingsSlider(
-              "Дисциплина",
-              <Clock size={18} color="#2563EB" strokeWidth={2} />,
-              "disciplineWeight",
-              localSettings.disciplineWeight
-            )}
-
-            {renderSettingsSlider(
-              "Точность кассы",
-              <Target size={18} color="#2563EB" strokeWidth={2} />,
-              "cashAccuracyWeight",
-              localSettings.cashAccuracyWeight
-            )}
-
-            {renderSettingsSlider(
-              "Без замечаний",
-              <Award size={18} color="#2563EB" strokeWidth={2} />,
-              "noComplaintsWeight",
-              localSettings.noComplaintsWeight
-            )}
-
-            {renderSettingsSlider(
-              "Обучение",
-              <BookOpen size={18} color="#2563EB" strokeWidth={2} />,
-              "trainingWeight",
-              localSettings.trainingWeight
-            )}
-
-            {renderSettingsSlider(
-              "Выполнение заданий",
-              <CheckSquare size={18} color="#2563EB" strokeWidth={2} />,
-              "tasksWeight",
-              localSettings.tasksWeight
-            )}
-
-            <View style={styles.totalRow}>
-              <Text style={styles.totalLabel}>Сумма весов:</Text>
-              <Text
-                style={[
-                  styles.totalValue,
-                  {
-                    color:
-                      Math.abs(
-                        localSettings.disciplineWeight +
-                          localSettings.cashAccuracyWeight +
-                          localSettings.noComplaintsWeight +
-                          localSettings.trainingWeight +
-                          localSettings.tasksWeight -
-                          1
-                      ) < 0.01
-                        ? "#15803D"
-                        : "#DC2626",
-                  },
-                ]}
-              >
-                {(
-                  (localSettings.disciplineWeight +
-                    localSettings.cashAccuracyWeight +
-                    localSettings.noComplaintsWeight +
-                    localSettings.trainingWeight +
-                    localSettings.tasksWeight) *
-                  100
-                ).toFixed(0)}
-                %
-              </Text>
-            </View>
-
-            <TouchableOpacity style={styles.saveButton} onPress={handleSaveSettings}>
-              <Save size={18} color="#FFFFFF" strokeWidth={2} />
-              <Text style={styles.saveButtonText}>Сохранить настройки</Text>
-            </TouchableOpacity>
-          </View>
         </ScrollView>
       )}
     </SafeAreaView>

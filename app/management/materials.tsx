@@ -4,6 +4,7 @@ import {
   ChevronDown,
   ChevronUp,
   Edit3,
+  ExternalLink,
   FileText,
   Plus,
   RefreshCcw,
@@ -15,6 +16,7 @@ import {
 import React, { useMemo, useState } from "react";
 import {
   Alert,
+  Linking,
   Platform,
   ScrollView,
   StyleSheet,
@@ -24,6 +26,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { Stack } from "expo-router";
 import { useApp } from "@/providers/AppProvider";
 import {
   EMPLOYEE_POSITIONS,
@@ -59,6 +62,7 @@ export default function MaterialsScreen() {
   const [formContent, setFormContent] = useState("");
   const [formCategory, setFormCategory] = useState(CATEGORIES[0]);
   const [formType, setFormType] = useState<TrainingMaterialType>("text");
+  const [formLink, setFormLink] = useState("");
   const [formAssignAll, setFormAssignAll] = useState(true);
   const [formAssignedGroups, setFormAssignedGroups] = useState<Position[]>([]);
 
@@ -94,9 +98,16 @@ export default function MaterialsScreen() {
     setFormContent("");
     setFormCategory(CATEGORIES[0]);
     setFormType("text");
+    setFormLink("");
     setFormAssignAll(true);
     setFormAssignedGroups([]);
     setEditingMaterial(null);
+  };
+
+  const handleOpenLink = (link: string) => {
+    Linking.openURL(link).catch((err) =>
+      console.error("Couldn't load page", err)
+    );
   };
 
   const handleAddMaterial = () => {
@@ -117,6 +128,7 @@ export default function MaterialsScreen() {
       content: formContent.trim(),
       category: formCategory,
       type: formType,
+      link: formLink.trim() || undefined,
       version: 1,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -160,6 +172,7 @@ export default function MaterialsScreen() {
       content: formContent.trim(),
       category: formCategory,
       type: formType,
+      link: formLink.trim() || undefined,
       assignedToAll: formAssignAll,
       assignedGroups: formAssignAll ? undefined : formAssignedGroups,
       versionHistory,
@@ -183,6 +196,7 @@ export default function MaterialsScreen() {
     setFormContent(material.content);
     setFormCategory(material.category);
     setFormType(material.type);
+    setFormLink(material.link || "");
     setFormAssignAll(material.assignedToAll);
     setFormAssignedGroups(material.assignedGroups || []);
     setShowAddForm(true);
@@ -203,6 +217,7 @@ export default function MaterialsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["bottom"]}>
+      <Stack.Screen options={{ title: "Учебные материалы", headerTitle: "Учебные материалы" }} />
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <View style={styles.headerTitleRow}>
@@ -315,6 +330,19 @@ export default function MaterialsScreen() {
                 ))}
               </View>
             </View>
+
+            {(formType === "pdf" || formType === "video") && (
+              <View style={styles.formField}>
+                <Text style={styles.formLabel}>Ссылка на материал *</Text>
+                <TextInput
+                  style={styles.formInput}
+                  value={formLink}
+                  onChangeText={setFormLink}
+                  placeholder={formType === "video" ? "Ссылка на видео (YouTube и т.д.)" : "Ссылка на PDF документ"}
+                  placeholderTextColor="#9CA3AF"
+                />
+              </View>
+            )}
 
             <View style={styles.formField}>
               <Text style={styles.formLabel}>Содержание *</Text>
@@ -481,6 +509,18 @@ export default function MaterialsScreen() {
                           {material.content}
                         </Text>
                       </View>
+
+                      {material.link && (
+                        <TouchableOpacity
+                          style={styles.linkButton}
+                          onPress={() => handleOpenLink(material.link!)}
+                        >
+                          <ExternalLink size={16} color="#FFFFFF" strokeWidth={2} />
+                          <Text style={styles.linkButtonText}>
+                            {material.type === "video" ? "Смотреть видео" : "Открыть документ"}
+                          </Text>
+                        </TouchableOpacity>
+                      )}
 
                       {stats.notViewedEmployees.length > 0 && (
                         <View style={styles.notViewedSection}>
@@ -848,6 +888,21 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#374151",
     lineHeight: 20,
+  },
+  linkButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#2563EB",
+    borderRadius: 8,
+    paddingVertical: 12,
+    marginBottom: 16,
+  },
+  linkButtonText: {
+    fontSize: 14,
+    fontWeight: "600" as const,
+    color: "#FFFFFF",
   },
   notViewedSection: {
     backgroundColor: "#FEF2F2",

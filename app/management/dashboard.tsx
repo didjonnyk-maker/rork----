@@ -6,7 +6,6 @@ import {
   CheckCircle,
   ChevronLeft,
   ChevronRight,
-  ChevronUp,
   Clock,
   MapPin,
   Maximize2,
@@ -81,7 +80,7 @@ export default function DashboardScreen() {
       let calculatedStatus: EmployeeStatus = "Не на смене";
       let lateMinutes: number | undefined;
 
-      if (shift.arrivedAt || shift.status === "В работе") {
+      if (shift.arrivedAt || shift.status === "В работе" || shift.employeeStatus === "На месте") {
         calculatedStatus = "На месте";
       } else if (diffMinutes > 0) {
         calculatedStatus = "Опаздывает";
@@ -89,6 +88,7 @@ export default function DashboardScreen() {
       } else if (shift.employeeStatus === "В пути") {
         calculatedStatus = "В пути";
       } else if (diffMinutes > -60) {
+        // Keep them as "Не на смене" but they will be picked up by "upcomingShifts" logic for display
         calculatedStatus = "Не на смене";
       }
 
@@ -353,9 +353,11 @@ export default function DashboardScreen() {
               </Text>
             </View>
           </View>
-          {shiftsWithStatus
-            .filter((s) => s.calculatedStatus === "В пути")
-            .map((shift) => renderShiftCard(shift))}
+          {upcomingShifts
+            .map((shift) => {
+              const s = shiftsWithStatus.find(sw => sw.id === shift.id);
+              return renderShiftCard(s || { ...shift, calculatedStatus: shift.employeeStatus || "Не на смене" });
+            })}
           {upcomingShifts.length === 0 && (
             <Text style={styles.emptyText}>Нет запланированных смен</Text>
           )}
