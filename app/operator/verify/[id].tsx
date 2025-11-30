@@ -197,6 +197,13 @@ export default function VerifyReportScreen() {
             </Text>
           </View>
 
+          {report.comment && (
+             <View style={styles.commentBox}>
+               <Text style={styles.commentLabel}>Комментарий кассира:</Text>
+               <Text style={styles.commentText}>{report.comment}</Text>
+             </View>
+          )}
+
           {isEditing && (
             <View style={styles.editActions}>
               <TouchableOpacity
@@ -384,6 +391,23 @@ const styles = StyleSheet.create({
     color: "#111827",
     minWidth: 120,
     textAlign: "right" as const,
+  },
+  commentBox: {
+    backgroundColor: "#F3F4F6",
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  commentLabel: {
+    fontSize: 12,
+    fontWeight: "600" as const,
+    color: "#4B5563",
+    marginBottom: 4,
+  },
+  commentText: {
+    fontSize: 14,
+    color: "#1F2937",
+    fontStyle: "italic" as const,
   },
   editActions: {
     flexDirection: "row",

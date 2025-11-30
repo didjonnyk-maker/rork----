@@ -76,13 +76,25 @@ export default function FinanceScreen() {
   }, [employees, periodStart, periodEnd, calculateEmployeeSalary]);
 
   const sortedAdvances = useMemo(
-    () => [...advances].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
-    [advances]
+    () =>
+      advances
+        .filter((a) => {
+          const d = new Date(a.date);
+          return d >= new Date(periodStart) && d <= new Date(periodEnd);
+        })
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+    [advances, periodStart, periodEnd]
   );
 
   const sortedPenalties = useMemo(
-    () => [...penalties].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
-    [penalties]
+    () =>
+      penalties
+        .filter((p) => {
+          const d = new Date(p.date);
+          return d >= new Date(periodStart) && d <= new Date(periodEnd);
+        })
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+    [penalties, periodStart, periodEnd]
   );
 
   const directorReport = useMemo(() => {
@@ -291,7 +303,14 @@ export default function FinanceScreen() {
           </View>
           <View>
             <Text style={styles.detailLabel}>Остаток:</Text>
-            <Text style={[styles.totalValue, { fontSize: 18 }]}>{formatCurrency(salary.remainingAmount)}</Text>
+            <Text
+              style={[
+                styles.totalValue,
+                { fontSize: 18, color: salary.remainingAmount < 0 ? "#DC2626" : "#15803D" },
+              ]}
+            >
+              {formatCurrency(salary.remainingAmount)}
+            </Text>
           </View>
         </View>
 
@@ -310,6 +329,41 @@ export default function FinanceScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["bottom"]}>
+      <View style={styles.periodSectionHeader}>
+        <Text style={styles.periodTitle}>Период расчёта</Text>
+        <View style={styles.periodInputs}>
+          <View style={styles.periodInput}>
+            <Calendar size={16} color="#6B7280" strokeWidth={2} />
+            <TouchableOpacity onPress={() => setShowStartPicker(true)} style={{ flex: 1 }}>
+              <Text style={styles.dateInput}>{periodStart}</Text>
+            </TouchableOpacity>
+            {showStartPicker && (
+              <DateTimePicker
+                value={new Date(periodStart)}
+                mode="date"
+                display="default"
+                onChange={onStartChange}
+              />
+            )}
+          </View>
+          <Text style={styles.periodSeparator}>—</Text>
+          <View style={styles.periodInput}>
+            <Calendar size={16} color="#6B7280" strokeWidth={2} />
+            <TouchableOpacity onPress={() => setShowEndPicker(true)} style={{ flex: 1 }}>
+              <Text style={styles.dateInput}>{periodEnd}</Text>
+            </TouchableOpacity>
+            {showEndPicker && (
+              <DateTimePicker
+                value={new Date(periodEnd)}
+                mode="date"
+                display="default"
+                onChange={onEndChange}
+              />
+            )}
+          </View>
+        </View>
+      </View>
+
       <View style={styles.tabsContainer}>
         <TouchableOpacity
           style={[styles.tab, selectedTab === "salary" && styles.tabActive]}
@@ -342,41 +396,6 @@ export default function FinanceScreen() {
 
       {selectedTab === "salary" && (
         <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-          <View style={styles.periodSection}>
-            <Text style={styles.periodTitle}>Период расчёта</Text>
-            <View style={styles.periodInputs}>
-              <View style={styles.periodInput}>
-                <Calendar size={16} color="#6B7280" strokeWidth={2} />
-                <TouchableOpacity onPress={() => setShowStartPicker(true)} style={{ flex: 1 }}>
-                  <Text style={styles.dateInput}>{periodStart}</Text>
-                </TouchableOpacity>
-                {showStartPicker && (
-                  <DateTimePicker
-                    value={new Date(periodStart)}
-                    mode="date"
-                    display="default"
-                    onChange={onStartChange}
-                  />
-                )}
-              </View>
-              <Text style={styles.periodSeparator}>—</Text>
-              <View style={styles.periodInput}>
-                <Calendar size={16} color="#6B7280" strokeWidth={2} />
-                <TouchableOpacity onPress={() => setShowEndPicker(true)} style={{ flex: 1 }}>
-                  <Text style={styles.dateInput}>{periodEnd}</Text>
-                </TouchableOpacity>
-                {showEndPicker && (
-                  <DateTimePicker
-                    value={new Date(periodEnd)}
-                    mode="date"
-                    display="default"
-                    onChange={onEndChange}
-                  />
-                )}
-              </View>
-            </View>
-          </View>
-
           <View style={styles.summaryCard}>
             <View style={styles.reportRow}>
               <View style={styles.reportItem}>
@@ -638,8 +657,11 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: 32,
   },
-  periodSection: {
-    marginBottom: 16,
+  periodSectionHeader: {
+    padding: 16,
+    backgroundColor: "#FFFFFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
   },
   periodTitle: {
     fontSize: 14,

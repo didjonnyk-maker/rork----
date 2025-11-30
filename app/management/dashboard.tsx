@@ -6,8 +6,11 @@ import {
   CheckCircle,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   Clock,
   MapPin,
+  Maximize2,
+  Minimize2,
   Navigation,
   User as UserIcon,
   XCircle,
@@ -46,6 +49,7 @@ export default function DashboardScreen() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [selectedView, setSelectedView] = useState<"today" | "tomorrow" | "after" | "week">("today");
   const [weekOffset, setWeekOffset] = useState(0);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -223,7 +227,48 @@ export default function DashboardScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        {unfilledCount !== null && unfilledCount > 0 && (
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.collapseButton}
+            onPress={() => setIsCollapsed(!isCollapsed)}
+          >
+            {isCollapsed ? (
+              <>
+                <Maximize2 size={16} color="#2563EB" strokeWidth={2} />
+                <Text style={styles.collapseButtonText}>Развернуть</Text>
+              </>
+            ) : (
+              <>
+                <Minimize2 size={16} color="#2563EB" strokeWidth={2} />
+                <Text style={styles.collapseButtonText}>Свернуть</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {isCollapsed ? (
+          <View style={styles.summaryContainer}>
+            <View style={styles.summaryCard}>
+              <AlertTriangle size={24} color="#DC2626" strokeWidth={2} />
+              <Text style={styles.summaryValue}>{lateShifts.length}</Text>
+              <Text style={styles.summaryLabel}>Опаздывают</Text>
+            </View>
+            <View style={styles.summaryCard}>
+              <MapPin size={24} color="#15803D" strokeWidth={2} />
+              <Text style={styles.summaryValue}>
+                {shiftsWithStatus.filter((s) => s.calculatedStatus === "На месте").length}
+              </Text>
+              <Text style={styles.summaryLabel}>На смене</Text>
+            </View>
+            <View style={styles.summaryCard}>
+              <Clock size={24} color="#2563EB" strokeWidth={2} />
+              <Text style={styles.summaryValue}>{upcomingShifts.length}</Text>
+              <Text style={styles.summaryLabel}>Скоро</Text>
+            </View>
+          </View>
+        ) : (
+          <>
+            {unfilledCount !== null && unfilledCount > 0 && (
           <TouchableOpacity
             style={styles.alertBanner}
             onPress={() => router.push("/management/" as never)}
@@ -433,6 +478,8 @@ export default function DashboardScreen() {
             )}
           </View>
         )}
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -449,6 +496,49 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 16,
     paddingBottom: 32,
+  },
+  headerActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    marginBottom: 16,
+  },
+  collapseButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#EFF6FF",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  collapseButtonText: {
+    fontSize: 14,
+    fontWeight: "600" as const,
+    color: "#2563EB",
+  },
+  summaryContainer: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  summaryCard: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    padding: 16,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    gap: 8,
+  },
+  summaryValue: {
+    fontSize: 24,
+    fontWeight: "700" as const,
+    color: "#111827",
+  },
+  summaryLabel: {
+    fontSize: 12,
+    color: "#6B7280",
+    fontWeight: "500" as const,
   },
   alertBanner: {
     flexDirection: "row",

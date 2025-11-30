@@ -6,6 +6,7 @@ import {
   Calendar,
   Clock,
   DollarSign,
+  FileText,
 } from "lucide-react-native";
 import { useMemo, useState } from "react";
 import {
@@ -25,7 +26,7 @@ import { Shift, ShiftType } from "@/types";
 
 export default function ReportScreen() {
   const router = useRouter();
-  const { currentUser, getEmployeeShifts, addReport, getNextShiftForEmployee } = useApp();
+  const { currentUser, getEmployeeShifts, addReport, getNextShiftForEmployee, reports } = useApp();
 
   const [selectedShiftId, setSelectedShiftId] = useState("");
   const [shiftType, setShiftType] = useState<ShiftType>("День");
@@ -35,13 +36,16 @@ export default function ReportScreen() {
   const [cashActual, setCashActual] = useState("");
   const [cardActual, setCardActual] = useState("");
   const [withdrawals, setWithdrawals] = useState("");
+  const [comment, setComment] = useState("");
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [nextShift, setNextShift] = useState<Shift | null>(null);
 
   const myShifts = useMemo(() => {
     if (!currentUser) return [];
-    return getEmployeeShifts(currentUser.id);
-  }, [currentUser, getEmployeeShifts]);
+    const allShifts = getEmployeeShifts(currentUser.id);
+    // Filter out shifts that already have a report
+    return allShifts.filter(shift => !reports.some(report => report.shiftId === shift.id));
+  }, [currentUser, getEmployeeShifts, reports]);
 
   const cashDiscrepancy = useMemo(() => {
     const cashAct = parseFloat(cashActual) || 0;
@@ -93,6 +97,7 @@ export default function ReportScreen() {
       cashDiscrepancy,
       cardDiscrepancy,
       verified: false,
+      comment,
     };
 
     addReport(report);
@@ -311,6 +316,23 @@ export default function ReportScreen() {
                 placeholder="0.00"
                 placeholderTextColor="#9CA3AF"
                 keyboardType="decimal-pad"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <View style={styles.labelRow}>
+                <FileText size={16} color="#374151" strokeWidth={2} />
+                <Text style={styles.inputLabel}>Комментарий (необязательно)</Text>
+              </View>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                value={comment}
+                onChangeText={setComment}
+                placeholder="Причина расхождений, заметки..."
+                placeholderTextColor="#9CA3AF"
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
               />
             </View>
           </View>
@@ -565,6 +587,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 15,
     color: "#111827",
+  },
+  textArea: {
+    minHeight: 80,
   },
   discrepanciesContainer: {
     gap: 12,

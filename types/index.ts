@@ -78,6 +78,7 @@ export interface CashierReport {
   verifiedBy?: string;
   verifiedAt?: string;
   rejectionReason?: string;
+  comment?: string;
 }
 
 export interface ShiftHistory {
