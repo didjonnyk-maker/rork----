@@ -919,9 +919,9 @@ export const [AppProvider, useApp] = createContextHook(() => {
         }
       });
 
-      const netSalary = Math.max(0, adjustedAmount - totalPenalties - shortages);
-      const totalPayout = Math.max(0, netSalary - totalAdvances);
-      const remainingAmount = Math.max(0, totalPayout - paidAmount);
+      const netSalary = adjustedAmount - totalPenalties - shortages;
+      const totalPayout = netSalary - totalAdvances;
+      const remainingAmount = totalPayout - paidAmount;
 
       return {
         employeeId,
@@ -1129,14 +1129,35 @@ export const [AppProvider, useApp] = createContextHook(() => {
         }
       });
 
+      // 5. Penalties Deducted
+      let penaltiesDeducted = 0;
+      periodShifts.forEach((shift) => {
+        if (shift.employeeId) {
+             const employeePenalties = penalties.filter(
+                (p) =>
+                  p.employeeId === shift.employeeId &&
+                  new Date(p.date) >= start &&
+                  new Date(p.date) <= end
+              );
+             penaltiesDeducted += employeePenalties.reduce((sum, p) => sum + p.amount, 0);
+        }
+      });
+      // Actually, penalties are not tied to shifts but to period.
+      const periodPenalties = penalties.filter((p) => {
+        const d = new Date(p.date);
+        return d >= start && d <= end;
+      });
+      penaltiesDeducted = periodPenalties.reduce((sum, p) => sum + p.amount, 0);
+
       return {
         plannedExpenses,
         advancesPaid,
         salariesPaid,
         remainingToPay,
+        penaltiesDeducted,
       };
     },
-    [shifts, users, advances, salaryPayments, calculateEmployeeSalary]
+    [shifts, users, advances, salaryPayments, penalties, calculateEmployeeSalary]
   );
 
   const canCloseShift = useCallback(
