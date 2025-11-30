@@ -2,7 +2,6 @@ import {
   Banknote,
   Calculator,
   Calendar,
-  DollarSign,
   TrendingDown,
   User as UserIcon,
 } from "lucide-react-native";
@@ -31,6 +30,7 @@ export default function FinanceScreen() {
     addPenalty,
     addSalaryPayment,
     currentUser,
+    getDirectorFinancialReport,
   } = useApp();
 
   const [selectedTab, setSelectedTab] = useState<"salary" | "advances" | "penalties">("salary");
@@ -58,11 +58,6 @@ export default function FinanceScreen() {
     return employees.map((emp) => calculateEmployeeSalary(emp.id, periodStart, periodEnd)).filter(Boolean) as SalaryCalculation[];
   }, [employees, periodStart, periodEnd, calculateEmployeeSalary]);
 
-  const totalPayout = useMemo(
-    () => salaryCalculations.reduce((sum, s) => sum + s.totalPayout, 0),
-    [salaryCalculations]
-  );
-
   const sortedAdvances = useMemo(
     () => [...advances].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
     [advances]
@@ -72,6 +67,10 @@ export default function FinanceScreen() {
     () => [...penalties].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
     [penalties]
   );
+
+  const directorReport = useMemo(() => {
+    return getDirectorFinancialReport(periodStart, periodEnd);
+  }, [periodStart, periodEnd, getDirectorFinancialReport]);
 
   const handleAddAdvance = () => {
     if (!advanceEmployeeId || !advanceAmount) {
@@ -343,10 +342,25 @@ export default function FinanceScreen() {
           </View>
 
           <View style={styles.summaryCard}>
-            <DollarSign size={24} color="#2563EB" strokeWidth={2} />
-            <View style={styles.summaryContent}>
-              <Text style={styles.summaryLabel}>Общая сумма к выплате</Text>
-              <Text style={styles.summaryValue}>{formatCurrency(totalPayout)}</Text>
+            <View style={styles.reportRow}>
+              <View style={styles.reportItem}>
+                 <Text style={styles.reportLabel}>План. расходы</Text>
+                 <Text style={styles.reportValue}>{formatCurrency(directorReport.plannedExpenses)}</Text>
+              </View>
+              <View style={styles.reportItem}>
+                 <Text style={styles.reportLabel}>Выплачено авансов</Text>
+                 <Text style={styles.reportValue}>{formatCurrency(directorReport.advancesPaid)}</Text>
+              </View>
+            </View>
+            <View style={[styles.reportRow, { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: "#BFDBFE" }]}>
+              <View style={styles.reportItem}>
+                 <Text style={styles.reportLabel}>Выплачено ЗП</Text>
+                 <Text style={styles.reportValue}>{formatCurrency(directorReport.salariesPaid)}</Text>
+              </View>
+              <View style={styles.reportItem}>
+                 <Text style={styles.reportLabel}>Остаток к выплате</Text>
+                 <Text style={[styles.reportValue, { color: "#1E40AF" }]}>{formatCurrency(directorReport.remainingToPay)}</Text>
+              </View>
             </View>
           </View>
 
@@ -624,9 +638,6 @@ const styles = StyleSheet.create({
     color: "#6B7280",
   },
   summaryCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 16,
     backgroundColor: "#EFF6FF",
     borderRadius: 12,
     padding: 16,
@@ -634,18 +645,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#BFDBFE",
   },
-  summaryContent: {
+  reportRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  reportItem: {
     flex: 1,
   },
-  summaryLabel: {
-    fontSize: 13,
-    color: "#1E40AF",
+  reportLabel: {
+    fontSize: 12,
+    color: "#60A5FA",
     marginBottom: 4,
+    fontWeight: "500",
   },
-  summaryValue: {
-    fontSize: 24,
-    fontWeight: "700" as const,
-    color: "#1E40AF",
+  reportValue: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#1E3A8A",
   },
   salaryCard: {
     backgroundColor: "#FFFFFF",

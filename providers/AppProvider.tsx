@@ -1075,6 +1075,68 @@ export const [AppProvider, useApp] = createContextHook(() => {
     [shifts]
   );
 
+  const getDirectorFinancialReport = useCallback(
+    (periodStart: string, periodEnd: string) => {
+      const start = new Date(periodStart);
+      const end = new Date(periodEnd);
+      // 1. Planned Expenses (all shifts in period)
+      const periodShifts = shifts.filter((s) => {
+        const d = new Date(s.date);
+        return d >= start && d <= end;
+      });
+
+      let plannedExpenses = 0;
+      periodShifts.forEach((shift) => {
+        let rate = DEFAULT_HOURLY_RATE;
+        if (shift.employeeId) {
+          const u = users.find((user) => user.id === shift.employeeId);
+          if (u?.hourlyRate) rate = u.hourlyRate;
+        }
+
+        const sTime = new Date(`${shift.date}T${shift.startTime}`);
+        let eTime = new Date(`${shift.date}T${shift.endTime}`);
+        if (eTime < sTime) eTime.setDate(eTime.getDate() + 1);
+        const hours = (eTime.getTime() - sTime.getTime()) / (1000 * 60 * 60);
+        plannedExpenses += hours * rate;
+      });
+
+      // 2. Advances Paid
+      const periodAdvances = advances.filter((a) => {
+        const d = new Date(a.date);
+        return d >= start && d <= end;
+      });
+      const advancesPaid = periodAdvances.reduce((sum, a) => sum + a.amount, 0);
+
+      // 3. Salaries Paid
+      const periodSalaries = salaryPayments.filter((p) => {
+        const d = new Date(p.date);
+        return d >= start && d <= end;
+      });
+      const salariesPaid = periodSalaries.reduce((sum, p) => sum + p.amount, 0);
+
+      // 4. Remaining to Pay
+      let remainingToPay = 0;
+      const relevantEmployees = users.filter((u) =>
+        EMPLOYEE_POSITIONS.includes(u.position as typeof EMPLOYEE_POSITIONS[number])
+      );
+
+      relevantEmployees.forEach((emp) => {
+        const calc = calculateEmployeeSalary(emp.id, periodStart, periodEnd);
+        if (calc) {
+          remainingToPay += calc.remainingAmount;
+        }
+      });
+
+      return {
+        plannedExpenses,
+        advancesPaid,
+        salariesPaid,
+        remainingToPay,
+      };
+    },
+    [shifts, users, advances, salaryPayments, calculateEmployeeSalary]
+  );
+
   const canCloseShift = useCallback(
     (shiftId: string, employeeId: string) => {
       const incompleteTasks = getEmployeeIncompleteTasks(employeeId);
@@ -1156,6 +1218,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
     getEmployeeTrainingStatus,
     isTrainingComplete,
     getNextShiftForEmployee,
+    getDirectorFinancialReport,
     canCloseShift,
     deleteShift,
     addSalaryPayment,

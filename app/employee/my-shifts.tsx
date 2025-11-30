@@ -8,6 +8,7 @@ import {
   MapPin,
   Navigation,
   User as UserIcon,
+  Zap,
 } from "lucide-react-native";
 import { useMemo } from "react";
 import {
@@ -47,7 +48,9 @@ export default function MyShiftsScreen() {
     const now = new Date();
     const shiftStart = new Date(`${shift.date}T${shift.startTime}`);
     const diffMinutes = Math.floor((shiftStart.getTime() - now.getTime()) / 60000);
-    return diffMinutes <= 120 && diffMinutes > 30;
+    // Allow marking "On Way" up to 2 hours before shift.
+    // User requested to just be able to press it.
+    return diffMinutes <= 120;
   };
 
   const canMarkArrival = (shift: Shift) => {
@@ -191,6 +194,12 @@ export default function MyShiftsScreen() {
                   <View style={styles.dateSection}>
                     <Calendar size={16} color="#6B7280" strokeWidth={2} />
                     <Text style={styles.shiftDate}>{formatDate(item.date)}</Text>
+                    {item.isUrgent && (
+                      <View style={styles.urgentBadge}>
+                        <Zap size={10} color="#FFFFFF" strokeWidth={2} fill="#FFFFFF" />
+                        <Text style={styles.urgentText}>Срочно</Text>
+                      </View>
+                    )}
                   </View>
                   <View
                     style={[
@@ -538,5 +547,20 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#2563EB",
     fontWeight: "500" as const,
+  },
+  urgentBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#F59E0B",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginLeft: 8,
+  },
+  urgentText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
 });

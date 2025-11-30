@@ -112,13 +112,30 @@ export default function EmployeeScreen() {
       {salaryInfo && (
         <View style={styles.balanceCard}>
           <View style={styles.balanceHeader}>
-            <Text style={styles.balanceLabel}>Баланс за {new Date().toLocaleDateString("ru-RU", { month: "long" })}</Text>
-            <Text style={styles.balanceAmount}>{salaryInfo.totalPayout.toFixed(0)} с</Text>
+            <Text style={styles.balanceLabel}>
+              Баланс за {new Date().toLocaleDateString("ru-RU", { month: "long" })}
+            </Text>
+            <Text style={styles.balanceAmount}>
+              {salaryInfo.remainingAmount.toFixed(0)} с
+            </Text>
           </View>
           <View style={styles.balanceDetails}>
-             <Text style={styles.balanceDetailText}>Отработано: {salaryInfo.hoursWorked.toFixed(1)} ч</Text>
-             {salaryInfo.advances > 0 && <Text style={styles.balanceDetailTextWarning}>Авансы: -{salaryInfo.advances} с</Text>}
-             {salaryInfo.penalties > 0 && <Text style={styles.balanceDetailTextWarning}>Штрафы: -{salaryInfo.penalties} с</Text>}
+            <Text style={styles.balanceDetailText}>
+              Начислено: {salaryInfo.totalPayout.toFixed(0)} с
+            </Text>
+            <Text style={[styles.balanceDetailText, { color: "#86EFAC" }]}>
+              Выплачено: {salaryInfo.paidAmount.toFixed(0)} с
+            </Text>
+            {salaryInfo.advances > 0 && (
+              <Text style={styles.balanceDetailTextWarning}>
+                Авансы: -{salaryInfo.advances} с
+              </Text>
+            )}
+            {salaryInfo.penalties > 0 && (
+              <Text style={styles.balanceDetailTextWarning}>
+                Штрафы: -{salaryInfo.penalties} с
+              </Text>
+            )}
           </View>
         </View>
       )}
