@@ -92,14 +92,6 @@ export default function DashboardScreen() {
     });
   }, [currentShifts, upcomingShifts, currentTime]);
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("ru-RU", {
-      day: "2-digit",
-      month: "short",
-    });
-  };
-
   const getStatusColor = (status: EmployeeStatus) => {
     switch (status) {
       case "На месте":
@@ -701,6 +693,18 @@ const styles = StyleSheet.create({
   weekShiftName: {
     fontSize: 9,
     color: "#374151",
+  },
+  urgentButton: {
+    marginTop: 12,
+    backgroundColor: "#DC2626",
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  urgentButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "600",
   },
   weekMoreShifts: {
     fontSize: 10,

@@ -30,7 +30,23 @@ export default function EmployeeScreen() {
     getAvailableShiftsForEmployee,
     bookShift,
     getEmployeeShifts,
+    calculateEmployeeSalary,
   } = useApp();
+
+  const currentPeriod = useMemo(() => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    return {
+      start: start.toISOString().split("T")[0],
+      end: end.toISOString().split("T")[0],
+    };
+  }, []);
+
+  const salaryInfo = useMemo(() => {
+    if (!currentUser) return null;
+    return calculateEmployeeSalary(currentUser.id, currentPeriod.start, currentPeriod.end);
+  }, [currentUser, currentPeriod, calculateEmployeeSalary]);
 
   const availableShifts = useMemo(
     () =>
@@ -92,6 +108,20 @@ export default function EmployeeScreen() {
           <LogOut size={20} color="#EF4444" strokeWidth={2} />
         </TouchableOpacity>
       </View>
+
+      {salaryInfo && (
+        <View style={styles.balanceCard}>
+          <View style={styles.balanceHeader}>
+            <Text style={styles.balanceLabel}>Баланс за {new Date().toLocaleDateString("ru-RU", { month: "long" })}</Text>
+            <Text style={styles.balanceAmount}>{salaryInfo.totalPayout.toFixed(0)} с</Text>
+          </View>
+          <View style={styles.balanceDetails}>
+             <Text style={styles.balanceDetailText}>Отработано: {salaryInfo.hoursWorked.toFixed(1)} ч</Text>
+             {salaryInfo.advances > 0 && <Text style={styles.balanceDetailTextWarning}>Авансы: -{salaryInfo.advances} с</Text>}
+             {salaryInfo.penalties > 0 && <Text style={styles.balanceDetailTextWarning}>Штрафы: -{salaryInfo.penalties} с</Text>}
+          </View>
+        </View>
+      )}
 
       <View style={styles.actionButtons}>
         <TouchableOpacity
@@ -224,6 +254,43 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#6B7280",
     marginTop: 2,
+  },
+  balanceCard: {
+    marginHorizontal: 20,
+    marginTop: 16,
+    padding: 16,
+    backgroundColor: "#1E40AF",
+    borderRadius: 16,
+  },
+  balanceHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  balanceLabel: {
+    color: "#BFDBFE",
+    fontSize: 14,
+    fontWeight: "500",
+    textTransform: "capitalize",
+  },
+  balanceAmount: {
+    color: "#FFFFFF",
+    fontSize: 24,
+    fontWeight: "700",
+  },
+  balanceDetails: {
+    flexDirection: "row",
+    gap: 12,
+    flexWrap: "wrap",
+  },
+  balanceDetailText: {
+    color: "#DBEAFE",
+    fontSize: 12,
+  },
+  balanceDetailTextWarning: {
+    color: "#FCA5A5",
+    fontSize: 12,
   },
   logoutButton: {
     padding: 8,

@@ -35,7 +35,7 @@ const DAYS_OF_WEEK: { key: DayOfWeek; label: string; short: string }[] = [
 ];
 
 export default function ShiftTemplatesScreen() {
-  const { addShift } = useApp();
+  const { addShifts } = useApp();
 
   const [showForm, setShowForm] = useState(false);
   const [startDate, setStartDate] = useState<Date | null>(null);
@@ -218,7 +218,7 @@ export default function ShiftTemplatesScreen() {
     }
 
     const confirmCreate = () => {
-      shifts.forEach(shift => addShift(shift));
+      addShifts(shifts);
       const successMsg = `Создано ${shifts.length} смен`;
       if (Platform.OS === "web") {
         alert(successMsg);

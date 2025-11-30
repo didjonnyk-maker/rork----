@@ -230,6 +230,14 @@ export const [AppProvider, useApp] = createContextHook(() => {
     [shifts, saveShifts]
   );
 
+  const addShifts = useCallback(
+    (newShiftsList: Shift[]) => {
+      const newShifts = [...shifts, ...newShiftsList];
+      saveShifts(newShifts);
+    },
+    [shifts, saveShifts]
+  );
+
   const updateShift = useCallback(
     (shiftId: string, updates: Partial<Shift>) => {
       const newShifts = shifts.map((shift) =>
@@ -275,19 +283,63 @@ export const [AppProvider, useApp] = createContextHook(() => {
     [shifts, saveShifts]
   );
 
+  const markOnWay = useCallback(
+    (shiftId: string) => {
+      const newShifts = shifts.map((shift) =>
+        shift.id === shiftId
+          ? {
+              ...shift,
+              employeeStatus: "В пути" as EmployeeStatus,
+            }
+          : shift
+      );
+      saveShifts(newShifts);
+    },
+    [shifts, saveShifts]
+  );
+
+  const acceptShiftNow = useCallback(
+    (shiftId: string, employeeId: string, employeeName: string) => {
+      const now = new Date().toISOString();
+      const newShifts = shifts.map((shift) =>
+        shift.id === shiftId
+          ? {
+              ...shift,
+              status: "В работе" as ShiftStatus,
+              employeeId,
+              employeeName,
+              arrivedAt: now,
+              employeeStatus: "На месте" as EmployeeStatus,
+            }
+          : shift
+      );
+      saveShifts(newShifts);
+    },
+    [shifts, saveShifts]
+  );
+
   const getEmployeeStatus = useCallback(
     (shiftId: string): EmployeeStatus => {
       const shift = shifts.find((s) => s.id === shiftId);
       if (!shift) return "Не на смене";
       if (shift.arrivedAt) return "На месте";
+      if (shift.employeeStatus === "В пути") return "В пути";
       
       const now = new Date();
       const shiftStart = new Date(`${shift.date}T${shift.startTime}`);
+      const shiftEnd = new Date(`${shift.date}T${shift.endTime}`);
+      if (shiftEnd < shiftStart) {
+        shiftEnd.setDate(shiftEnd.getDate() + 1);
+      }
+
       const diffMinutes = Math.floor((now.getTime() - shiftStart.getTime()) / 60000);
       
-      if (diffMinutes > 0) {
+      // If shift has started and user not arrived -> Late
+      if (diffMinutes > 0 && now < shiftEnd) {
         return "Опаздывает";
-      } else if (diffMinutes > -60) {
+      } 
+      // If within 60 mins before start -> On Way (implicitly)
+      else if (diffMinutes > -60 && diffMinutes <= 0) {
         return "В пути";
       }
       return "Не на смене";
@@ -518,26 +570,6 @@ export const [AppProvider, useApp] = createContextHook(() => {
     [tasks, saveTasks]
   );
 
-  const rateTask = useCallback(
-    (taskId: string, rating: 1 | 2 | 3 | 4 | 5, verifierName: string) => {
-      const newTasks = tasks.map((task) =>
-        task.id === taskId
-          ? {
-              ...task,
-              status: "Проверено" as TaskStatus,
-              rating,
-              verifiedAt: new Date().toISOString(),
-              verifiedBy: verifierName,
-              moderatedBy: verifierName,
-              moderatedAt: new Date().toISOString(),
-            }
-          : task
-      );
-      saveTasks(newTasks);
-    },
-    [tasks, saveTasks]
-  );
-
   const getAvailableTasks = useCallback(() => {
     return tasks.filter((task) => task.status === "Доступно");
   }, [tasks]);
@@ -711,6 +743,46 @@ export const [AppProvider, useApp] = createContextHook(() => {
       return Math.max(0.5, Math.min(1.5, weightedScore));
     },
     [kpiSettings]
+  );
+
+  const rateTask = useCallback(
+    (taskId: string, rating: 1 | 2 | 3 | 4 | 5, verifierName: string) => {
+      const task = tasks.find((t) => t.id === taskId);
+      const newTasks = tasks.map((t) =>
+        t.id === taskId
+          ? {
+              ...t,
+              status: "Проверено" as TaskStatus,
+              rating,
+              verifiedAt: new Date().toISOString(),
+              verifiedBy: verifierName,
+              moderatedBy: verifierName,
+              moderatedAt: new Date().toISOString(),
+            }
+          : t
+      );
+      saveTasks(newTasks);
+
+      // Recalculate KPI
+      if (task && (task.takenBy || task.assignedTo)) {
+        const employeeId = task.takenBy || task.assignedTo!;
+        const employeeTasks = newTasks.filter(
+          (t) => (t.takenBy === employeeId || t.assignedTo === employeeId) && t.status === "Проверено"
+        );
+        
+        if (employeeTasks.length > 0) {
+           // Calculate task completion score based on ratings
+           // 5 stars = 100%, 1 star = 20%
+           // Or just average rating normalized to 100
+           const totalRating = employeeTasks.reduce((sum, t) => sum + (t.rating || 0), 0);
+           const maxRating = employeeTasks.length * 5;
+           const tasksCompletion = Math.round((totalRating / maxRating) * 100);
+
+           updateEmployeeKPI(employeeId, { tasksCompletion });
+        }
+      }
+    },
+    [tasks, saveTasks, updateEmployeeKPI]
   );
 
   const saveReplacements = useCallback(async (newReplacements: ShiftReplacement[]) => {
@@ -988,9 +1060,12 @@ export const [AppProvider, useApp] = createContextHook(() => {
     addUser,
     updateUser,
     addShift,
+    addShifts,
     updateShift,
     bookShift,
     markArrival,
+    markOnWay,
+    acceptShiftNow,
     getEmployeeStatus,
     addReport,
     getAvailableShiftsForEmployee,
