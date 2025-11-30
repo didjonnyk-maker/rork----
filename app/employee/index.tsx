@@ -8,6 +8,7 @@ import {
   History,
   LogOut,
   User as UserIcon,
+  Zap,
 } from "lucide-react-native";
 import { useMemo } from "react";
 import {
@@ -213,6 +214,12 @@ export default function EmployeeScreen() {
                 <View style={styles.dateSection}>
                   <Calendar size={16} color="#6B7280" strokeWidth={2} />
                   <Text style={styles.shiftDate}>{formatDate(item.date)}</Text>
+                  {item.isUrgent && (
+                    <View style={styles.urgentBadge}>
+                      <Zap size={10} color="#FFFFFF" strokeWidth={2} fill="#FFFFFF" />
+                      <Text style={styles.urgentText}>Срочно</Text>
+                    </View>
+                  )}
                 </View>
                 <View style={styles.freeBadge}>
                   <Text style={styles.freeBadgeText}>Свободно</Text>
@@ -378,6 +385,21 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     borderWidth: 1,
     borderColor: "#E5E7EB",
+  },
+  urgentBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#F59E0B",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginLeft: 8,
+  },
+  urgentText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#FFFFFF",
   },
   shiftHeader: {
     flexDirection: "row",

@@ -919,7 +919,8 @@ export const [AppProvider, useApp] = createContextHook(() => {
         }
       });
 
-      const totalPayout = adjustedAmount - totalPenalties - shortages - totalAdvances;
+      const netSalary = Math.max(0, adjustedAmount - totalPenalties - shortages);
+      const totalPayout = Math.max(0, netSalary - totalAdvances);
       const remainingAmount = Math.max(0, totalPayout - paidAmount);
 
       return {
@@ -933,7 +934,8 @@ export const [AppProvider, useApp] = createContextHook(() => {
         penalties: totalPenalties,
         shortages,
         advances: totalAdvances,
-        totalPayout: Math.max(0, totalPayout),
+        netSalary,
+        totalPayout,
         period: `${periodStart} - ${periodEnd}`,
         paidAmount,
         remainingAmount,
@@ -1145,6 +1147,15 @@ export const [AppProvider, useApp] = createContextHook(() => {
     [getEmployeeIncompleteTasks]
   );
 
+  const loginByCode = useCallback(async (code: string) => {
+    const user = users.find((u) => u.passcode === code);
+    if (user) {
+      await login(user);
+      return true;
+    }
+    return false;
+  }, [users, login]);
+
   return {
     users,
     shifts,
@@ -1159,6 +1170,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
     employeeKPIs,
     replacements,
     isLoading,
+    loginByCode,
     login,
     logout,
     addUser,

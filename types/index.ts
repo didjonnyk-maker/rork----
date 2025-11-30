@@ -32,6 +32,7 @@ export interface User {
   hourlyRate?: number;
   kpiCoefficient?: number;
   balance?: number;
+  passcode?: string;
 }
 
 export interface Shift {
@@ -177,6 +178,7 @@ export interface SalaryCalculation {
   shortages: number;
   advances: number;
   totalPayout: number;
+  netSalary: number;
   period: string;
   paidAmount: number;
   remainingAmount: number;

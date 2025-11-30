@@ -1,3 +1,4 @@
+import DateTimePicker from "@react-native-community/datetimepicker";
 import {
   Banknote,
   Calculator,
@@ -48,6 +49,22 @@ export default function FinanceScreen() {
   const [penaltyEmployeeId, setPenaltyEmployeeId] = useState("");
   const [penaltyAmount, setPenaltyAmount] = useState("");
   const [penaltyReason, setPenaltyReason] = useState("");
+  const [showStartPicker, setShowStartPicker] = useState(false);
+  const [showEndPicker, setShowEndPicker] = useState(false);
+
+  const onStartChange = (event: any, selectedDate?: Date) => {
+    setShowStartPicker(false);
+    if (selectedDate) {
+      setPeriodStart(selectedDate.toISOString().split("T")[0]);
+    }
+  };
+
+  const onEndChange = (event: any, selectedDate?: Date) => {
+    setShowEndPicker(false);
+    if (selectedDate) {
+      setPeriodEnd(selectedDate.toISOString().split("T")[0]);
+    }
+  };
 
   const employees = useMemo(
     () => users.filter((u) => EMPLOYEE_POSITIONS.includes(u.position as typeof EMPLOYEE_POSITIONS[number])),
@@ -252,17 +269,28 @@ export default function FinanceScreen() {
         )}
 
         <View style={styles.totalRow}>
-          <Text style={styles.totalLabel}>Всего начислено:</Text>
-          <Text style={styles.totalValue}>{formatCurrency(salary.totalPayout)}</Text>
+          <Text style={styles.totalLabel}>Заработано (до авансов):</Text>
+          <Text style={styles.totalValue}>{formatCurrency(salary.netSalary)}</Text>
+        </View>
+
+        <View style={styles.paymentStatusRow}>
+           <View>
+            <Text style={styles.detailLabel}>Авансы:</Text>
+            <Text style={[styles.detailValue, { color: "#DC2626" }]}>-{formatCurrency(salary.advances)}</Text>
+          </View>
+          <View>
+            <Text style={styles.detailLabel}>К выплате:</Text>
+            <Text style={styles.detailValue}>{formatCurrency(salary.totalPayout)}</Text>
+          </View>
         </View>
 
         <View style={styles.paymentStatusRow}>
           <View>
-            <Text style={styles.detailLabel}>Выплачено:</Text>
+            <Text style={styles.detailLabel}>Выплачено ЗП:</Text>
             <Text style={[styles.detailValue, { color: "#15803D" }]}>{formatCurrency(salary.paidAmount)}</Text>
           </View>
           <View>
-            <Text style={styles.detailLabel}>К оплате:</Text>
+            <Text style={styles.detailLabel}>Остаток:</Text>
             <Text style={[styles.totalValue, { fontSize: 18 }]}>{formatCurrency(salary.remainingAmount)}</Text>
           </View>
         </View>
@@ -319,24 +347,32 @@ export default function FinanceScreen() {
             <View style={styles.periodInputs}>
               <View style={styles.periodInput}>
                 <Calendar size={16} color="#6B7280" strokeWidth={2} />
-                <TextInput
-                  style={styles.dateInput}
-                  value={periodStart}
-                  onChangeText={setPeriodStart}
-                  placeholder="ГГГГ-ММ-ДД"
-                  placeholderTextColor="#9CA3AF"
-                />
+                <TouchableOpacity onPress={() => setShowStartPicker(true)} style={{ flex: 1 }}>
+                  <Text style={styles.dateInput}>{periodStart}</Text>
+                </TouchableOpacity>
+                {showStartPicker && (
+                  <DateTimePicker
+                    value={new Date(periodStart)}
+                    mode="date"
+                    display="default"
+                    onChange={onStartChange}
+                  />
+                )}
               </View>
               <Text style={styles.periodSeparator}>—</Text>
               <View style={styles.periodInput}>
                 <Calendar size={16} color="#6B7280" strokeWidth={2} />
-                <TextInput
-                  style={styles.dateInput}
-                  value={periodEnd}
-                  onChangeText={setPeriodEnd}
-                  placeholder="ГГГГ-ММ-ДД"
-                  placeholderTextColor="#9CA3AF"
-                />
+                <TouchableOpacity onPress={() => setShowEndPicker(true)} style={{ flex: 1 }}>
+                  <Text style={styles.dateInput}>{periodEnd}</Text>
+                </TouchableOpacity>
+                {showEndPicker && (
+                  <DateTimePicker
+                    value={new Date(periodEnd)}
+                    mode="date"
+                    display="default"
+                    onChange={onEndChange}
+                  />
+                )}
               </View>
             </View>
           </View>

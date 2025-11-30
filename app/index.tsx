@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { User, UserPlus, Briefcase, Shield } from "lucide-react-native";
+import { User, UserPlus, Briefcase, Shield, KeyRound, LogIn } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import {
   StyleSheet,
@@ -9,6 +9,8 @@ import {
   View,
   ActivityIndicator,
   ScrollView,
+  Platform,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useApp } from "@/providers/AppProvider";
@@ -25,10 +27,17 @@ type RoleCategory = "employee" | "admin";
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { currentUser, isLoading, login, addUser } = useApp();
+  const { currentUser, isLoading, login, addUser, loginByCode } = useApp();
+  const [isRegistering, setIsRegistering] = useState(false);
+  
+  // Login State
+  const [code, setCode] = useState("");
+
+  // Registration State
   const [name, setName] = useState("");
   const [roleCategory, setRoleCategory] = useState<RoleCategory>("employee");
   const [selectedPosition, setSelectedPosition] = useState<Position>("Кассир");
+  const [newCode, setNewCode] = useState("");
 
   const availablePositions = roleCategory === "employee" ? EMPLOYEE_POSITIONS : ADMIN_POSITIONS;
 
@@ -53,8 +62,21 @@ export default function LoginScreen() {
     }
   }, [currentUser, isLoading, router]);
 
-  const handleLogin = () => {
-    if (!name.trim()) {
+  const handleLogin = async () => {
+    if (!code.trim()) return;
+    const success = await loginByCode(code.trim());
+    if (!success) {
+      const msg = "Неверный код доступа";
+      if (Platform.OS === "web") {
+        alert(msg);
+      } else {
+        Alert.alert("Ошибка", msg);
+      }
+    }
+  };
+
+  const handleRegister = () => {
+    if (!name.trim() || !newCode.trim()) {
       return;
     }
 
@@ -68,6 +90,7 @@ export default function LoginScreen() {
       hourlyRate: DEFAULT_HOURLY_RATE,
       kpiCoefficient: 1.0,
       balance: 0,
+      passcode: newCode.trim(),
     };
 
     addUser(newUser);
@@ -95,107 +118,163 @@ export default function LoginScreen() {
           </Text>
         </View>
 
-        <View style={styles.form}>
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Ваше имя</Text>
-            <TextInput
-              style={styles.input}
-              value={name}
-              onChangeText={setName}
-              placeholder="Введите ваше имя"
-              placeholderTextColor="#9CA3AF"
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Категория</Text>
-            <View style={styles.roleButtons}>
-              <TouchableOpacity
-                style={[
-                  styles.roleButton,
-                  roleCategory === "employee" && styles.roleButtonActive,
-                ]}
-                onPress={() => setRoleCategory("employee")}
-              >
-                <User
-                  size={20}
-                  color={roleCategory === "employee" ? "#FFFFFF" : "#6B7280"}
-                  strokeWidth={2}
-                />
-                <Text
-                  style={[
-                    styles.roleButtonText,
-                    roleCategory === "employee" && styles.roleButtonTextActive,
-                  ]}
-                >
-                  Сотрудник
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.roleButton,
-                  roleCategory === "admin" && styles.roleButtonActive,
-                ]}
-                onPress={() => setRoleCategory("admin")}
-              >
-                <Shield
-                  size={20}
-                  color={roleCategory === "admin" ? "#FFFFFF" : "#6B7280"}
-                  strokeWidth={2}
-                />
-                <Text
-                  style={[
-                    styles.roleButtonText,
-                    roleCategory === "admin" && styles.roleButtonTextActive,
-                  ]}
-                >
-                  Администрация
-                </Text>
-              </TouchableOpacity>
+        {!isRegistering ? (
+          <View style={styles.form}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Код доступа</Text>
+              <TextInput
+                style={styles.input}
+                value={code}
+                onChangeText={setCode}
+                placeholder="Введите ваш код"
+                placeholderTextColor="#9CA3AF"
+                keyboardType="number-pad"
+                secureTextEntry
+              />
             </View>
-          </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Должность</Text>
-            <View style={styles.positionsGrid}>
-              {availablePositions.map((pos) => (
+            <TouchableOpacity
+              style={[styles.loginButton, !code.trim() && styles.loginButtonDisabled]}
+              onPress={handleLogin}
+              disabled={!code.trim()}
+            >
+              <LogIn size={20} color="#FFFFFF" />
+              <Text style={styles.loginButtonText}>Войти</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.switchModeButton}
+              onPress={() => setIsRegistering(true)}
+            >
+              <Text style={styles.switchModeText}>Нет аккаунта? Зарегистрироваться</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.form}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Ваше имя</Text>
+              <TextInput
+                style={styles.input}
+                value={name}
+                onChangeText={setName}
+                placeholder="Введите ваше имя"
+                placeholderTextColor="#9CA3AF"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Придумайте код доступа</Text>
+              <TextInput
+                style={styles.input}
+                value={newCode}
+                onChangeText={setNewCode}
+                placeholder="Например: 1234"
+                placeholderTextColor="#9CA3AF"
+                keyboardType="number-pad"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Категория</Text>
+              <View style={styles.roleButtons}>
                 <TouchableOpacity
-                  key={pos}
                   style={[
-                    styles.positionButton,
-                    selectedPosition === pos && styles.positionButtonActive,
+                    styles.roleButton,
+                    roleCategory === "employee" && styles.roleButtonActive,
                   ]}
-                  onPress={() => setSelectedPosition(pos)}
+                  onPress={() => setRoleCategory("employee")}
                 >
+                  <User
+                    size={20}
+                    color={roleCategory === "employee" ? "#FFFFFF" : "#6B7280"}
+                    strokeWidth={2}
+                  />
                   <Text
                     style={[
-                      styles.positionButtonText,
-                      selectedPosition === pos && styles.positionButtonTextActive,
+                      styles.roleButtonText,
+                      roleCategory === "employee" && styles.roleButtonTextActive,
                     ]}
                   >
-                    {pos}
+                    Сотрудник
                   </Text>
                 </TouchableOpacity>
-              ))}
+
+                <TouchableOpacity
+                  style={[
+                    styles.roleButton,
+                    roleCategory === "admin" && styles.roleButtonActive,
+                  ]}
+                  onPress={() => setRoleCategory("admin")}
+                >
+                  <Shield
+                    size={20}
+                    color={roleCategory === "admin" ? "#FFFFFF" : "#6B7280"}
+                    strokeWidth={2}
+                  />
+                  <Text
+                    style={[
+                      styles.roleButtonText,
+                      roleCategory === "admin" && styles.roleButtonTextActive,
+                    ]}
+                  >
+                    Администрация
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
 
-          <View style={styles.roleInfoBox}>
-            <Briefcase size={16} color="#2563EB" strokeWidth={2} />
-            <Text style={styles.roleInfoText}>
-              Роль: {ROLE_BY_POSITION[selectedPosition]}
-            </Text>
-          </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Должность</Text>
+              <View style={styles.positionsGrid}>
+                {availablePositions.map((pos) => (
+                  <TouchableOpacity
+                    key={pos}
+                    style={[
+                      styles.positionButton,
+                      selectedPosition === pos && styles.positionButtonActive,
+                    ]}
+                    onPress={() => setSelectedPosition(pos)}
+                  >
+                    <Text
+                      style={[
+                        styles.positionButtonText,
+                        selectedPosition === pos && styles.positionButtonTextActive,
+                      ]}
+                    >
+                      {pos}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
 
-          <TouchableOpacity
-            style={[styles.loginButton, !name.trim() && styles.loginButtonDisabled]}
-            onPress={handleLogin}
-            disabled={!name.trim()}
-          >
-            <Text style={styles.loginButtonText}>Войти</Text>
-          </TouchableOpacity>
-        </View>
+            <View style={styles.roleInfoBox}>
+              <Briefcase size={16} color="#2563EB" strokeWidth={2} />
+              <Text style={styles.roleInfoText}>
+                Роль: {ROLE_BY_POSITION[selectedPosition]}
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              style={[
+                styles.loginButton,
+                (!name.trim() || !newCode.trim()) && styles.loginButtonDisabled,
+              ]}
+              onPress={handleRegister}
+              disabled={!name.trim() || !newCode.trim()}
+            >
+              <UserPlus size={20} color="#FFFFFF" />
+              <Text style={styles.loginButtonText}>Создать аккаунт</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.switchModeButton}
+              onPress={() => setIsRegistering(false)}
+            >
+              <Text style={styles.switchModeText}>Уже есть аккаунт? Войти</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -342,7 +421,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#2563EB",
     borderRadius: 12,
     paddingVertical: 16,
+    flexDirection: "row",
+    justifyContent: "center",
     alignItems: "center",
+    gap: 8,
     marginTop: 8,
   },
   loginButtonDisabled: {
@@ -352,5 +434,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600" as const,
     color: "#FFFFFF",
+  },
+  switchModeButton: {
+    marginTop: 16,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  switchModeText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#2563EB",
   },
 });
