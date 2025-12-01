@@ -9,6 +9,7 @@ import {
   Star,
   User as UserIcon,
   XCircle,
+  Store,
 } from "lucide-react-native";
 import React, { useMemo, useState } from "react";
 import {
@@ -23,7 +24,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useApp } from "@/providers/AppProvider";
-import { EMPLOYEE_POSITIONS, Task, TaskStatus } from "@/types";
+import { EMPLOYEE_POSITIONS, Task, TaskStatus, MARKETS, MarketId } from "@/types";
 
 const STATUS_CONFIG: Record<TaskStatus, { color: string; bgColor: string; icon: React.ReactNode }> = {
   "Новое": { color: "#6B7280", bgColor: "#F3F4F6", icon: <Circle size={14} color="#6B7280" strokeWidth={2} /> },
@@ -43,6 +44,9 @@ export default function TasksScreen() {
   const [newTaskDescription, setNewTaskDescription] = useState("");
   const [newTaskAssignee, setNewTaskAssignee] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<TaskStatus | "all">("all");
+  
+  const [selectedMarketId, setSelectedMarketId] = useState<MarketId>(currentUser?.marketId || "danek");
+  const isDirector = currentUser?.role === "Директор";
 
   const employees = useMemo(
     () => users.filter((u) => EMPLOYEE_POSITIONS.includes(u.position as typeof EMPLOYEE_POSITIONS[number])),
@@ -50,16 +54,18 @@ export default function TasksScreen() {
   );
 
   const filteredTasks = useMemo(() => {
-    let result = [...tasks];
+    // Filter by market first
+    let result = tasks.filter(t => t.marketId === selectedMarketId);
+    
     if (selectedStatus !== "all") {
       result = result.filter((t) => t.status === selectedStatus);
     }
     return result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [tasks, selectedStatus]);
+  }, [tasks, selectedStatus, selectedMarketId]);
 
   const pendingReviewCount = useMemo(
-    () => tasks.filter((t) => t.status === "Выполнено" || t.status === "На модерации").length,
-    [tasks]
+    () => tasks.filter((t) => (t.status === "Выполнено" || t.status === "На модерации") && t.marketId === selectedMarketId).length,
+    [tasks, selectedMarketId]
   );
 
   const handleAddTask = () => {
@@ -75,6 +81,7 @@ export default function TasksScreen() {
 
     const task: Task = {
       id: Date.now().toString(),
+      marketId: selectedMarketId,
       title: newTaskTitle.trim(),
       description: newTaskDescription.trim() || undefined,
       assignedTo: newTaskAssignee || undefined,
@@ -294,6 +301,33 @@ export default function TasksScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["bottom"]}>
       <View style={styles.header}>
+        {isDirector && (
+            <View style={styles.marketSelector}>
+                {MARKETS.map((market) => (
+                <TouchableOpacity
+                    key={market.id}
+                    style={[
+                    styles.marketTab,
+                    selectedMarketId === market.id && styles.marketTabActive,
+                    ]}
+                    onPress={() => setSelectedMarketId(market.id)}
+                >
+                    <Store
+                    size={14}
+                    color={selectedMarketId === market.id ? "#2563EB" : "#6B7280"}
+                    />
+                    <Text
+                    style={[
+                        styles.marketTabText,
+                        selectedMarketId === market.id && styles.marketTabTextActive,
+                    ]}
+                    >
+                    {market.name}
+                    </Text>
+                </TouchableOpacity>
+                ))}
+            </View>
+        )}
         <View style={styles.headerTop}>
           <Text style={styles.headerTitle}>Задания</Text>
           {pendingReviewCount > 0 && (
@@ -479,6 +513,39 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 12,
+  },
+  marketSelector: {
+    flexDirection: "row",
+    backgroundColor: "#F3F4F6",
+    borderRadius: 8,
+    padding: 2,
+    marginBottom: 12,
+  },
+  marketTab: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  marketTabActive: {
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  marketTabText: {
+    fontSize: 13,
+    fontWeight: "500" as const,
+    color: "#6B7280",
+  },
+  marketTabTextActive: {
+    color: "#2563EB",
+    fontWeight: "600" as const,
   },
   headerTitle: {
     fontSize: 20,

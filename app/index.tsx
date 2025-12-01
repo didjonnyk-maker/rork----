@@ -1,5 +1,5 @@
 import { useRouter } from "expo-router";
-import { User, UserPlus, Briefcase, Shield, KeyRound, LogIn } from "lucide-react-native";
+import { User, UserPlus, Briefcase, Shield, LogIn, Store } from "lucide-react-native";
 import { useEffect, useState } from "react";
 import {
   StyleSheet,
@@ -20,7 +20,9 @@ import {
   EMPLOYEE_POSITIONS, 
   ADMIN_POSITIONS, 
   ROLE_BY_POSITION,
-  DEFAULT_HOURLY_RATE 
+  DEFAULT_HOURLY_RATE,
+  MarketId,
+  MARKETS
 } from "@/types";
 
 type RoleCategory = "employee" | "admin";
@@ -37,6 +39,7 @@ export default function LoginScreen() {
   const [name, setName] = useState("");
   const [roleCategory, setRoleCategory] = useState<RoleCategory>("employee");
   const [selectedPosition, setSelectedPosition] = useState<Position>("Кассир");
+  const [selectedMarket, setSelectedMarket] = useState<MarketId>("danek");
   const [newCode, setNewCode] = useState("");
 
   const availablePositions = roleCategory === "employee" ? EMPLOYEE_POSITIONS : ADMIN_POSITIONS;
@@ -87,6 +90,7 @@ export default function LoginScreen() {
       name: name.trim(),
       role,
       position: selectedPosition,
+      marketId: selectedMarket,
       hourlyRate: DEFAULT_HOURLY_RATE,
       kpiCoefficient: 1.0,
       balance: 0,
@@ -220,6 +224,46 @@ export default function LoginScreen() {
                     Администрация
                   </Text>
                 </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Маркет</Text>
+              <View style={styles.roleButtons}>
+                {MARKETS.map((market) => (
+                  <TouchableOpacity
+                    key={market.id}
+                    style={[
+                      styles.roleButton,
+                      selectedMarket === market.id && styles.roleButtonActive,
+                    ]}
+                    onPress={() => setSelectedMarket(market.id)}
+                  >
+                    <Store
+                      size={20}
+                      color={selectedMarket === market.id ? "#FFFFFF" : "#6B7280"}
+                      strokeWidth={2}
+                    />
+                    <View>
+                      <Text
+                        style={[
+                          styles.roleButtonText,
+                          selectedMarket === market.id && styles.roleButtonTextActive,
+                        ]}
+                      >
+                        {market.name}
+                      </Text>
+                      <Text
+                         style={[
+                          styles.marketAddress,
+                          selectedMarket === market.id && styles.marketAddressActive,
+                        ]}
+                      >
+                        {market.address}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
               </View>
             </View>
 
@@ -368,6 +412,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600" as const,
     color: "#6B7280",
+  },
+  marketAddress: {
+    fontSize: 10,
+    color: "#9CA3AF",
+  },
+  marketAddressActive: {
+    color: "#DBEAFE",
   },
   roleButtonTextActive: {
     color: "#FFFFFF",

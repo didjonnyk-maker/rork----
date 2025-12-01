@@ -13,6 +13,7 @@ import {
   Navigation,
   User as UserIcon,
   XCircle,
+  Store,
 } from "lucide-react-native";
 import { useMemo, useEffect, useState } from "react";
 import {
@@ -25,7 +26,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useApp } from "@/providers/AppProvider";
-import { Shift, EmployeeStatus } from "@/types";
+import { Shift, EmployeeStatus, MARKETS, MarketId } from "@/types";
 
 interface ShiftWithStatus extends Shift {
   calculatedStatus: EmployeeStatus;
@@ -41,7 +42,8 @@ export default function DashboardScreen() {
     getDayAfterTomorrowShifts,
     getShiftsRequiringArrival,
     getLateShifts,
-    getUnfilledShiftsWarning,
+    currentUser,
+    shifts,
   } = useApp();
 
   const [refreshing, setRefreshing] = useState(false);
@@ -49,6 +51,9 @@ export default function DashboardScreen() {
   const [selectedView, setSelectedView] = useState<"today" | "tomorrow" | "after" | "week">("today");
   const [weekOffset, setWeekOffset] = useState(0);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  
+  const [selectedMarketId, setSelectedMarketId] = useState<MarketId>(currentUser?.marketId || "danek");
+  const isDirector = currentUser?.role === "Директор";
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -63,13 +68,30 @@ export default function DashboardScreen() {
     setTimeout(() => setRefreshing(false), 500);
   };
 
-  const upcomingShifts = useMemo(() => getUpcomingShifts(1), [getUpcomingShifts]);
-  const currentShifts = useMemo(() => getCurrentShifts(), [getCurrentShifts]);
-  const tomorrowShifts = useMemo(() => getTomorrowShifts(), [getTomorrowShifts]);
-  const dayAfterShifts = useMemo(() => getDayAfterTomorrowShifts(), [getDayAfterTomorrowShifts]);
-  const warningShifts = useMemo(() => getShiftsRequiringArrival(), [getShiftsRequiringArrival]);
-  const lateShifts = useMemo(() => getLateShifts(), [getLateShifts]);
-  const unfilledCount = getUnfilledShiftsWarning();
+  const upcomingShifts = useMemo(() => getUpcomingShifts(1).filter(s => s.marketId === selectedMarketId), [getUpcomingShifts, selectedMarketId]);
+  const currentShifts = useMemo(() => getCurrentShifts().filter(s => s.marketId === selectedMarketId), [getCurrentShifts, selectedMarketId]);
+  const tomorrowShifts = useMemo(() => getTomorrowShifts().filter(s => s.marketId === selectedMarketId), [getTomorrowShifts, selectedMarketId]);
+  const dayAfterShifts = useMemo(() => getDayAfterTomorrowShifts().filter(s => s.marketId === selectedMarketId), [getDayAfterTomorrowShifts, selectedMarketId]);
+  const warningShifts = useMemo(() => getShiftsRequiringArrival().filter(s => s.marketId === selectedMarketId), [getShiftsRequiringArrival, selectedMarketId]);
+  const lateShifts = useMemo(() => getLateShifts().filter(s => s.marketId === selectedMarketId), [getLateShifts, selectedMarketId]);
+  
+  const unfilledCount = useMemo(() => {
+    const today = new Date();
+    const threeDaysLater = new Date(today);
+    threeDaysLater.setDate(today.getDate() + 3);
+
+    const unfilled = shifts.filter((shift) => {
+      const shiftDate = new Date(shift.date);
+      return (
+        shift.status === "Свободно" &&
+        shiftDate >= today &&
+        shiftDate <= threeDaysLater &&
+        shift.marketId === selectedMarketId
+      );
+    });
+
+    return unfilled.length > 0 ? unfilled.length : null;
+  }, [shifts, selectedMarketId]);
 
   const shiftsWithStatus: ShiftWithStatus[] = useMemo(() => {
     const now = currentTime;
@@ -150,8 +172,8 @@ export default function DashboardScreen() {
       const d = new Date(startOfWeek);
       d.setDate(startOfWeek.getDate() + i);
       const dateStr = d.toISOString().split("T")[0];
-      const dayShifts = [...currentShifts, ...tomorrowShifts, ...dayAfterShifts].filter(
-        (s) => s.date === dateStr
+      const dayShifts = shifts.filter(
+        (s) => s.date === dateStr && s.marketId === selectedMarketId
       );
       dates.push({
         date: d,
@@ -228,6 +250,33 @@ export default function DashboardScreen() {
         }
       >
         <View style={styles.headerActions}>
+          {isDirector && (
+            <View style={styles.marketSelector}>
+                {MARKETS.map((market) => (
+                <TouchableOpacity
+                    key={market.id}
+                    style={[
+                    styles.marketTab,
+                    selectedMarketId === market.id && styles.marketTabActive,
+                    ]}
+                    onPress={() => setSelectedMarketId(market.id)}
+                >
+                    <Store
+                    size={14}
+                    color={selectedMarketId === market.id ? "#2563EB" : "#6B7280"}
+                    />
+                    <Text
+                    style={[
+                        styles.marketTabText,
+                        selectedMarketId === market.id && styles.marketTabTextActive,
+                    ]}
+                    >
+                    {market.name}
+                    </Text>
+                </TouchableOpacity>
+                ))}
+            </View>
+          )}
           <TouchableOpacity
             style={styles.collapseButton}
             onPress={() => setIsCollapsed(!isCollapsed)}
@@ -501,8 +550,41 @@ const styles = StyleSheet.create({
   },
   headerActions: {
     flexDirection: "row",
-    justifyContent: "flex-end",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 16,
+  },
+  marketSelector: {
+    flexDirection: "row",
+    backgroundColor: "#EFF6FF",
+    borderRadius: 8,
+    padding: 2,
+  },
+  marketTab: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+  },
+  marketTabActive: {
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  marketTabText: {
+    fontSize: 13,
+    fontWeight: "500" as const,
+    color: "#6B7280",
+  },
+  marketTabTextActive: {
+    color: "#2563EB",
+    fontWeight: "600" as const,
   },
   collapseButton: {
     flexDirection: "row",

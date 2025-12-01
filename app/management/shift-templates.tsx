@@ -6,6 +6,7 @@ import {
   Plus,
   Repeat,
   User,
+  Store,
 } from "lucide-react-native";
 import { useMemo, useState } from "react";
 import {
@@ -19,7 +20,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useApp } from "@/providers/AppProvider";
-import { Position, EMPLOYEE_POSITIONS, DayOfWeek } from "@/types";
+import { Position, EMPLOYEE_POSITIONS, DayOfWeek, MARKETS, MarketId } from "@/types";
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, "0"));
 const MINUTES = ["00", "15", "30", "45"];
@@ -35,7 +36,7 @@ const DAYS_OF_WEEK: { key: DayOfWeek; label: string; short: string }[] = [
 ];
 
 export default function ShiftTemplatesScreen() {
-  const { addShifts } = useApp();
+  const { addShifts, currentUser } = useApp();
 
   const [showForm, setShowForm] = useState(false);
   const [startDate, setStartDate] = useState<Date | null>(null);
@@ -50,6 +51,9 @@ export default function ShiftTemplatesScreen() {
   const [selectedDays, setSelectedDays] = useState<DayOfWeek[]>([
     "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"
   ]);
+  const [selectedMarketId, setSelectedMarketId] = useState<MarketId>(currentUser?.marketId || "danek");
+
+  const isDirector = currentUser?.role === "Директор";
 
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear();
@@ -182,6 +186,7 @@ export default function ShiftTemplatesScreen() {
 
     const shifts: {
       id: string;
+      marketId: MarketId;
       date: string;
       startTime: string;
       endTime: string;
@@ -196,6 +201,7 @@ export default function ShiftTemplatesScreen() {
       if (selectedDays.includes(dayKey)) {
         shifts.push({
           id: `${Date.now()}-${shifts.length}`,
+          marketId: selectedMarketId,
           date: currentDate.toISOString().split("T")[0],
           startTime: `${startHour}:${startMinute}`,
           endTime: `${endHour}:${endMinute}`,
@@ -271,6 +277,37 @@ export default function ShiftTemplatesScreen() {
                 <Calendar size={20} color="#2563EB" strokeWidth={2} />
                 <Text style={styles.sectionTitle}>Период</Text>
               </View>
+
+              {isDirector && (
+                <View style={styles.marketSelector}>
+                   <Text style={styles.marketLabel}>Маркет:</Text>
+                   <View style={styles.marketButtons}>
+                     {MARKETS.map((market) => (
+                        <TouchableOpacity
+                          key={market.id}
+                          style={[
+                            styles.marketButton,
+                            selectedMarketId === market.id && styles.marketButtonActive,
+                          ]}
+                          onPress={() => setSelectedMarketId(market.id)}
+                        >
+                          <Store
+                            size={16}
+                            color={selectedMarketId === market.id ? "#FFFFFF" : "#6B7280"}
+                          />
+                          <Text
+                            style={[
+                              styles.marketButtonText,
+                              selectedMarketId === market.id && styles.marketButtonTextActive,
+                            ]}
+                          >
+                            {market.name}
+                          </Text>
+                        </TouchableOpacity>
+                     ))}
+                   </View>
+                </View>
+              )}
 
               <View style={styles.dateRangeDisplay}>
                 <TouchableOpacity 
@@ -540,6 +577,43 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700" as const,
     color: "#111827",
+  },
+  marketSelector: {
+    marginBottom: 16,
+  },
+  marketLabel: {
+    fontSize: 14,
+    fontWeight: "600" as const,
+    color: "#374151",
+    marginBottom: 8,
+  },
+  marketButtons: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  marketButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 8,
+    paddingVertical: 10,
+  },
+  marketButtonActive: {
+    backgroundColor: "#2563EB",
+    borderColor: "#2563EB",
+  },
+  marketButtonText: {
+    fontSize: 14,
+    fontWeight: "500" as const,
+    color: "#6B7280",
+  },
+  marketButtonTextActive: {
+    color: "#FFFFFF",
   },
   dateRangeDisplay: {
     flexDirection: "row" as const,

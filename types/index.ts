@@ -24,11 +24,25 @@ export type RecurrenceType = "daily" | "weekly" | "custom";
 
 export type DayOfWeek = "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday";
 
+export type MarketId = "danek" | "yunusalieva";
+
+export interface Market {
+  id: MarketId;
+  name: string;
+  address: string;
+}
+
+export const MARKETS: Market[] = [
+  { id: "danek", name: "Данек", address: "8 мкр, 18/1" },
+  { id: "yunusalieva", name: "Юнусалиева", address: "Юнусалиева 173/3" },
+];
+
 export interface User {
   id: string;
   name: string;
   role: UserRole;
   position: Position;
+  marketId?: MarketId;
   hourlyRate?: number;
   kpiCoefficient?: number;
   balance?: number;
@@ -37,6 +51,7 @@ export interface User {
 
 export interface Shift {
   id: string;
+  marketId: MarketId;
   date: string;
   startTime: string;
   endTime: string;
@@ -52,6 +67,7 @@ export interface Shift {
 
 export interface ShiftTemplate {
   id: string;
+  marketId: MarketId;
   recurrenceType: RecurrenceType;
   daysOfWeek?: DayOfWeek[];
   startTime: string;
@@ -62,6 +78,7 @@ export interface ShiftTemplate {
 
 export interface CashierReport {
   id: string;
+  marketId?: MarketId;
   date: string;
   shiftId: string;
   employeeId: string;
@@ -101,6 +118,7 @@ export type TaskStatus = "Новое" | "Доступно" | "В работе" |
 
 export interface Task {
   id: string;
+  marketId: MarketId;
   title: string;
   description?: string;
   assignedTo?: string;

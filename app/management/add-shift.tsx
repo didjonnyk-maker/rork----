@@ -5,6 +5,7 @@ import {
   ChevronRight,
   Clock,
   User,
+  Store,
 } from "lucide-react-native";
 import { useMemo, useState } from "react";
 import {
@@ -18,14 +19,14 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useApp } from "@/providers/AppProvider";
-import { Position, EMPLOYEE_POSITIONS } from "@/types";
+import { Position, EMPLOYEE_POSITIONS, MARKETS, MarketId } from "@/types";
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, "0"));
 const MINUTES = ["00", "15", "30", "45"];
 
 export default function AddShiftScreen() {
   const router = useRouter();
-  const { addShift } = useApp();
+  const { addShift, currentUser } = useApp();
 
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [startHour, setStartHour] = useState("09");
@@ -34,6 +35,9 @@ export default function AddShiftScreen() {
   const [endMinute, setEndMinute] = useState("00");
   const [position, setPosition] = useState<Position>("Кассир");
   const [calendarMonth, setCalendarMonth] = useState(new Date());
+  const [selectedMarketId, setSelectedMarketId] = useState<MarketId>(currentUser?.marketId || "danek");
+
+  const isDirector = currentUser?.role === "Директор";
 
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear();
@@ -109,6 +113,7 @@ export default function AddShiftScreen() {
 
     const newShift = {
       id: Date.now().toString(),
+      marketId: selectedMarketId,
       date: dateStr,
       startTime,
       endTime,
@@ -144,6 +149,37 @@ export default function AddShiftScreen() {
             <Calendar size={20} color="#2563EB" strokeWidth={2} />
             <Text style={styles.sectionTitle}>Выберите дату</Text>
           </View>
+
+          {isDirector && (
+            <View style={styles.marketSelector}>
+               <Text style={styles.marketLabel}>Маркет:</Text>
+               <View style={styles.marketButtons}>
+                 {MARKETS.map((market) => (
+                    <TouchableOpacity
+                      key={market.id}
+                      style={[
+                        styles.marketButton,
+                        selectedMarketId === market.id && styles.marketButtonActive,
+                      ]}
+                      onPress={() => setSelectedMarketId(market.id)}
+                    >
+                      <Store
+                        size={16}
+                        color={selectedMarketId === market.id ? "#FFFFFF" : "#6B7280"}
+                      />
+                      <Text
+                        style={[
+                          styles.marketButtonText,
+                          selectedMarketId === market.id && styles.marketButtonTextActive,
+                        ]}
+                      >
+                        {market.name}
+                      </Text>
+                    </TouchableOpacity>
+                 ))}
+               </View>
+            </View>
+          )}
 
           <View style={styles.calendarContainer}>
             <View style={styles.calendarHeader}>
@@ -386,6 +422,43 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: "700" as const,
     color: "#111827",
+  },
+  marketSelector: {
+    marginBottom: 16,
+  },
+  marketLabel: {
+    fontSize: 14,
+    fontWeight: "600" as const,
+    color: "#374151",
+    marginBottom: 8,
+  },
+  marketButtons: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  marketButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 8,
+    paddingVertical: 10,
+  },
+  marketButtonActive: {
+    backgroundColor: "#2563EB",
+    borderColor: "#2563EB",
+  },
+  marketButtonText: {
+    fontSize: 14,
+    fontWeight: "500" as const,
+    color: "#6B7280",
+  },
+  marketButtonTextActive: {
+    color: "#FFFFFF",
   },
   calendarContainer: {
     backgroundColor: "#FFFFFF",
