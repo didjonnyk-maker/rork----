@@ -155,15 +155,6 @@ export default function ManagementScreen() {
           <ClipboardList size={22} color="#2563EB" strokeWidth={2} />
           <Text style={styles.actionGridText}>Задания</Text>
         </TouchableOpacity>
-        {(currentUser?.position === "Директор" || currentUser?.position === "Администратор") && (
-          <TouchableOpacity
-            style={styles.actionGridButton}
-            onPress={() => router.push("/operator/" as never)}
-          >
-            <CheckSquare size={22} color="#2563EB" strokeWidth={2} />
-            <Text style={styles.actionGridText}>Проверка отчётов</Text>
-          </TouchableOpacity>
-        )}
         <TouchableOpacity
           style={styles.actionGridButton}
           onPress={() => router.push("/management/history" as never)}

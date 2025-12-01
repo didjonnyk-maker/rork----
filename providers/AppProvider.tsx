@@ -6,6 +6,7 @@ import {
   CashierReport,
   EmployeeKPI,
   EmployeeStatus,
+  Bonus,
   EmployeeTrainingProgress,
   KPISettings,
   Penalty,
@@ -41,6 +42,7 @@ const STORAGE_KEYS = {
   TRAINING_MATERIALS: "@tabel_training_materials",
   TRAINING_PROGRESS: "@tabel_training_progress",
   SALARY_PAYMENTS: "@tabel_salary_payments",
+  BONUSES: "@tabel_bonuses",
 };
 
 export const [AppProvider, useApp] = createContextHook(() => {
@@ -62,6 +64,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
   });
   const [employeeKPIs, setEmployeeKPIs] = useState<EmployeeKPI[]>([]);
   const [replacements, setReplacements] = useState<ShiftReplacement[]>([]);
+  const [bonuses, setBonuses] = useState<Bonus[]>([]);
   const [trainingMaterials, setTrainingMaterials] = useState<TrainingMaterial[]>([]);
   const [trainingProgress, setTrainingProgress] = useState<EmployeeTrainingProgress[]>([]);
   const [salaryPayments, setSalaryPayments] = useState<SalaryPayment[]>([]);
@@ -89,6 +92,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
         trainingMaterialsData,
         trainingProgressData,
         salaryPaymentsData,
+        bonusesData,
       ] = await Promise.all([
         AsyncStorage.getItem(STORAGE_KEYS.USERS),
         AsyncStorage.getItem(STORAGE_KEYS.SHIFTS),
@@ -105,6 +109,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
         AsyncStorage.getItem(STORAGE_KEYS.TRAINING_MATERIALS),
         AsyncStorage.getItem(STORAGE_KEYS.TRAINING_PROGRESS),
         AsyncStorage.getItem(STORAGE_KEYS.SALARY_PAYMENTS),
+        AsyncStorage.getItem(STORAGE_KEYS.BONUSES),
       ]);
 
       if (usersData) setUsers(JSON.parse(usersData));
@@ -122,6 +127,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
       if (trainingMaterialsData) setTrainingMaterials(JSON.parse(trainingMaterialsData));
       if (trainingProgressData) setTrainingProgress(JSON.parse(trainingProgressData));
       if (salaryPaymentsData) setSalaryPayments(JSON.parse(salaryPaymentsData));
+      if (bonusesData) setBonuses(JSON.parse(bonusesData));
     } catch (error) {
       console.error("Error loading data:", error);
     } finally {
@@ -657,10 +663,17 @@ export const [AppProvider, useApp] = createContextHook(() => {
     });
   }, [shifts]);
 
+  const getLocalDateString = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const getTomorrowShifts = useCallback(() => {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowStr = tomorrow.toISOString().split("T")[0];
+    const tomorrowStr = getLocalDateString(tomorrow);
 
     return shifts.filter((shift) => shift.date === tomorrowStr);
   }, [shifts]);
@@ -668,9 +681,33 @@ export const [AppProvider, useApp] = createContextHook(() => {
   const getDayAfterTomorrowShifts = useCallback(() => {
     const dayAfter = new Date();
     dayAfter.setDate(dayAfter.getDate() + 2);
-    const dayAfterStr = dayAfter.toISOString().split("T")[0];
+    const dayAfterStr = getLocalDateString(dayAfter);
     return shifts.filter((shift) => shift.date === dayAfterStr);
   }, [shifts]);
+
+  const saveBonuses = useCallback(async (newBonuses: Bonus[]) => {
+    try {
+      await AsyncStorage.setItem(STORAGE_KEYS.BONUSES, JSON.stringify(newBonuses));
+      setBonuses(newBonuses);
+    } catch (error) {
+      console.error("Error saving bonuses:", error);
+    }
+  }, []);
+
+  const addBonus = useCallback(
+    (bonus: Bonus) => {
+      const newBonuses = [...bonuses, bonus];
+      saveBonuses(newBonuses);
+    },
+    [bonuses, saveBonuses]
+  );
+
+  const getBonusesForEmployee = useCallback(
+    (employeeId: string) => {
+      return bonuses.filter((b) => b.employeeId === employeeId);
+    },
+    [bonuses]
+  );
 
   const savePenalties = useCallback(async (newPenalties: Penalty[]) => {
     try {
@@ -930,6 +967,14 @@ export const [AppProvider, useApp] = createContextHook(() => {
       );
       const totalAdvances = employeeAdvances.reduce((sum, a) => sum + a.amount, 0);
 
+      const employeeBonuses = bonuses.filter(
+        (b) =>
+          b.employeeId === employeeId &&
+          new Date(b.date) >= new Date(periodStart) &&
+          new Date(b.date) <= new Date(periodEnd)
+      );
+      const totalBonuses = employeeBonuses.reduce((sum, b) => sum + b.amount, 0);
+
       const employeePayments = salaryPayments.filter(
         (p) =>
           p.employeeId === employeeId &&
@@ -946,7 +991,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
         }
       });
 
-      const netSalary = adjustedAmount - totalPenalties - shortages;
+      const netSalary = adjustedAmount + totalBonuses - totalPenalties - shortages;
       const totalPayout = netSalary - totalAdvances;
       const remainingAmount = totalPayout - paidAmount;
 
@@ -961,6 +1006,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
         penalties: totalPenalties,
         shortages,
         advances: totalAdvances,
+        bonuses: totalBonuses,
         netSalary,
         totalPayout,
         period: `${periodStart} - ${periodEnd}`,
@@ -968,7 +1014,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
         remainingAmount,
       };
     },
-    [users, history, penalties, advances, salaryPayments, getEmployeeKPI, calculateKPICoefficient]
+    [users, history, penalties, advances, bonuses, salaryPayments, getEmployeeKPI, calculateKPICoefficient]
   );
 
   const getShiftsRequiringArrival = useCallback(() => {
@@ -1136,6 +1182,18 @@ export const [AppProvider, useApp] = createContextHook(() => {
       });
       const advancesPaid = periodAdvances.reduce((sum, a) => sum + a.amount, 0);
 
+      // Bonuses Paid (included in planned/salary expense, but good to know)
+      const periodBonuses = bonuses.filter((b) => {
+        const d = new Date(b.date);
+        return d >= start && d <= end;
+      });
+      const bonusesPaid = periodBonuses.reduce((sum, b) => sum + b.amount, 0);
+      
+      // Update planned expenses to include bonuses? 
+      // Planned expenses usually refers to shifts hours * rate.
+      // Bonuses increase the expense.
+      plannedExpenses += bonusesPaid;
+
       // 3. Salaries Paid
       const periodSalaries = salaryPayments.filter((p) => {
         const d = new Date(p.date);
@@ -1184,7 +1242,7 @@ export const [AppProvider, useApp] = createContextHook(() => {
         penaltiesDeducted,
       };
     },
-    [shifts, users, advances, salaryPayments, penalties, calculateEmployeeSalary]
+    [shifts, users, advances, bonuses, salaryPayments, penalties, calculateEmployeeSalary]
   );
 
   const canCloseShift = useCallback(
@@ -1261,6 +1319,9 @@ export const [AppProvider, useApp] = createContextHook(() => {
     getDayAfterTomorrowShifts,
     addPenalty,
     getPenaltiesForEmployee,
+    addBonus,
+    getBonusesForEmployee,
+    bonuses,
     updateKpiSettings,
     updateEmployeeKPI,
     getEmployeeKPI,

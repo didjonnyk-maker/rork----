@@ -141,6 +141,16 @@ export interface Advance {
   approvedBy?: string;
 }
 
+export interface Bonus {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  amount: number;
+  date: string;
+  reason: string;
+  createdBy: string;
+}
+
 export const EMPLOYEE_POSITIONS: Position[] = ["Кассир", "Продавец", "Универсал"];
 export const ADMIN_POSITIONS: Position[] = ["Операционист-кассир", "Администратор", "Директор"];
 export const ALL_POSITIONS: Position[] = [...EMPLOYEE_POSITIONS, ...ADMIN_POSITIONS];
@@ -179,6 +189,7 @@ export interface SalaryCalculation {
   penalties: number;
   shortages: number;
   advances: number;
+  bonuses: number;
   totalPayout: number;
   netSalary: number;
   period: string;

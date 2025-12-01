@@ -5,6 +5,7 @@ import {
   Calendar,
   TrendingDown,
   User as UserIcon,
+  Award,
 } from "lucide-react-native";
 import { useMemo, useState } from "react";
 import {
@@ -26,15 +27,17 @@ export default function FinanceScreen() {
     users,
     advances,
     penalties,
+    bonuses,
     calculateEmployeeSalary,
     addAdvance,
     addPenalty,
+    addBonus,
     addSalaryPayment,
     currentUser,
     getDirectorFinancialReport,
   } = useApp();
 
-  const [selectedTab, setSelectedTab] = useState<"salary" | "advances" | "penalties">("salary");
+  const [selectedTab, setSelectedTab] = useState<"salary" | "advances" | "penalties" | "bonuses">("salary");
   const [periodStart, setPeriodStart] = useState(() => {
     const date = new Date();
     date.setDate(1);
@@ -51,6 +54,9 @@ export default function FinanceScreen() {
   const [penaltyEmployeeId, setPenaltyEmployeeId] = useState("");
   const [penaltyAmount, setPenaltyAmount] = useState("");
   const [penaltyReason, setPenaltyReason] = useState("");
+  const [bonusEmployeeId, setBonusEmployeeId] = useState("");
+  const [bonusAmount, setBonusAmount] = useState("");
+  const [bonusReason, setBonusReason] = useState("");
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [showEndPicker, setShowEndPicker] = useState(false);
 
@@ -97,6 +103,17 @@ export default function FinanceScreen() {
         })
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
     [penalties, periodStart, periodEnd]
+  );
+
+  const sortedBonuses = useMemo(
+    () =>
+      bonuses
+        .filter((b) => {
+          const d = new Date(b.date);
+          return d >= new Date(periodStart) && d <= new Date(periodEnd);
+        })
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+    [bonuses, periodStart, periodEnd]
   );
 
   const directorReport = useMemo(() => {
@@ -168,6 +185,43 @@ export default function FinanceScreen() {
     setPenaltyReason("");
 
     const successMsg = "Штраф успешно добавлен!";
+    if (Platform.OS === "web") {
+      alert(successMsg);
+    } else {
+      Alert.alert("Успешно", successMsg);
+    }
+  };
+
+  const handleAddBonus = () => {
+    if (!bonusEmployeeId || !bonusAmount || !bonusReason) {
+      const msg = "Заполните все поля (сотрудник, сумма, причина/комментарий)";
+      if (Platform.OS === "web") {
+        alert(msg);
+      } else {
+        Alert.alert("Ошибка", msg);
+      }
+      return;
+    }
+
+    const employee = employees.find((e) => e.id === bonusEmployeeId);
+    if (!employee) return;
+
+    const bonus = {
+      id: Date.now().toString(),
+      employeeId: bonusEmployeeId,
+      employeeName: employee.name,
+      amount: parseFloat(bonusAmount),
+      reason: bonusReason,
+      date: new Date().toISOString(),
+      createdBy: currentUser?.name || "Директор",
+    };
+
+    addBonus(bonus);
+    setBonusEmployeeId("");
+    setBonusAmount("");
+    setBonusReason("");
+
+    const successMsg = "Премия успешно начислена!";
     if (Platform.OS === "web") {
       alert(successMsg);
     } else {
@@ -257,6 +311,13 @@ export default function FinanceScreen() {
           <Text style={styles.detailLabel}>После KPI:</Text>
           <Text style={styles.detailValue}>{formatCurrency(salary.adjustedAmount)}</Text>
         </View>
+
+        {salary.bonuses > 0 && (
+          <View style={styles.detailRow}>
+            <Text style={styles.detailLabel}>Премии:</Text>
+            <Text style={[styles.detailValue, { color: "#15803D" }]}>+{formatCurrency(salary.bonuses)}</Text>
+          </View>
+        )}
 
         {(salary.penalties > 0 || salary.shortages > 0 || salary.advances > 0) && (
           <View style={styles.deductionsSection}>
@@ -392,6 +453,15 @@ export default function FinanceScreen() {
           <TrendingDown size={18} color={selectedTab === "penalties" ? "#FFFFFF" : "#6B7280"} strokeWidth={2} />
           <Text style={[styles.tabText, selectedTab === "penalties" && styles.tabTextActive]}>
             Штрафы
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, selectedTab === "bonuses" && styles.tabActive]}
+          onPress={() => setSelectedTab("bonuses")}
+        >
+          <Award size={18} color={selectedTab === "bonuses" ? "#FFFFFF" : "#6B7280"} strokeWidth={2} />
+          <Text style={[styles.tabText, selectedTab === "bonuses" && styles.tabTextActive]}>
+            Премии
           </Text>
         </TouchableOpacity>
       </View>
@@ -609,6 +679,101 @@ export default function FinanceScreen() {
               <TrendingDown size={48} color="#D1D5DB" strokeWidth={1.5} />
               <Text style={styles.emptyTitle}>Нет штрафов</Text>
               <Text style={styles.emptyText}>История штрафов пуста</Text>
+            </View>
+          )}
+        </ScrollView>
+      )}
+      {selectedTab === "bonuses" && (
+        <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
+          <View style={styles.addAdvanceCard}>
+            <Text style={styles.addAdvanceTitle}>Начислить премию</Text>
+
+            <View style={styles.advanceForm}>
+              <View style={styles.selectContainer}>
+                <Text style={styles.inputLabel}>Сотрудник</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                  <View style={styles.employeeChips}>
+                    {employees.map((emp) => (
+                      <TouchableOpacity
+                        key={emp.id}
+                        style={[
+                          styles.employeeChip,
+                          bonusEmployeeId === emp.id && styles.employeeChipActive,
+                        ]}
+                        onPress={() => setBonusEmployeeId(emp.id)}
+                      >
+                        <Text
+                          style={[
+                            styles.employeeChipText,
+                            bonusEmployeeId === emp.id && styles.employeeChipTextActive,
+                          ]}
+                        >
+                          {emp.name}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </ScrollView>
+              </View>
+
+              <View style={styles.amountContainer}>
+                <Text style={styles.inputLabel}>Сумма (сом)</Text>
+                <TextInput
+                  style={styles.amountInput}
+                  value={bonusAmount}
+                  onChangeText={setBonusAmount}
+                  placeholder="0.00"
+                  placeholderTextColor="#9CA3AF"
+                  keyboardType="decimal-pad"
+                />
+              </View>
+
+              <View style={styles.amountContainer}>
+                <Text style={styles.inputLabel}>Причина / Комментарий</Text>
+                <TextInput
+                  style={styles.amountInput}
+                  value={bonusReason}
+                  onChangeText={setBonusReason}
+                  placeholder="За отличную работу и т.д."
+                  placeholderTextColor="#9CA3AF"
+                />
+              </View>
+
+              <TouchableOpacity
+                style={[
+                  styles.addAdvanceButton,
+                  { backgroundColor: "#15803D" },
+                  (!bonusEmployeeId || !bonusAmount || !bonusReason) && styles.addAdvanceButtonDisabled,
+                ]}
+                onPress={handleAddBonus}
+                disabled={!bonusEmployeeId || !bonusAmount || !bonusReason}
+              >
+                <Award size={18} color="#FFFFFF" strokeWidth={2} />
+                <Text style={styles.addAdvanceButtonText}>Начислить премию</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          <Text style={styles.listTitle}>История премий</Text>
+          {sortedBonuses.map((bonus) => (
+            <View key={bonus.id} style={[styles.penaltyCard, { borderColor: "#BBF7D0", borderLeftColor: "#15803D" }]}>
+              <View style={styles.historyHeader}>
+                <Text style={styles.historyName}>{bonus.employeeName}</Text>
+                <Text style={[styles.penaltyAmount, { color: "#15803D" }]}>+{formatCurrency(bonus.amount)}</Text>
+              </View>
+              <Text style={styles.penaltyReason}>{bonus.reason}</Text>
+              <View style={styles.historyFooter}>
+                <Text style={styles.historyDate}>{formatDate(bonus.date)}</Text>
+                <Text style={styles.historyApproved}>Начислил: {bonus.createdBy}</Text>
+              </View>
+            </View>
+          ))}
+
+          {sortedBonuses.length === 0 && (
+            <View style={styles.emptyState}>
+              <Award size={48} color="#D1D5DB" strokeWidth={1.5} />
+              <Text style={styles.emptyTitle}>Нет премий</Text>
+              <Text style={styles.emptyText}>История премий пуста</Text>
             </View>
           )}
         </ScrollView>
