@@ -39,7 +39,6 @@ const MATERIAL_TYPES: { value: TrainingMaterialType; label: string; icon: React.
   { value: "text", label: "Текст", icon: <FileText size={16} color="#2563EB" strokeWidth={2} /> },
   { value: "pdf", label: "PDF", icon: <FileText size={16} color="#DC2626" strokeWidth={2} /> },
   { value: "video", label: "Видео", icon: <Video size={16} color="#7C3AED" strokeWidth={2} /> },
-  { value: "document", label: "Документ", icon: <FileText size={16} color="#15803D" strokeWidth={2} /> },
 ];
 
 const CATEGORIES = ["Основы работы", "Кассовые операции", "Безопасность", "Обслуживание клиентов", "Другое"];
