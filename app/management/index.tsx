@@ -17,6 +17,8 @@ import {
   Trash2,
   User as UserIcon,
   Zap,
+  XCircle,
+  CheckCircle,
 } from "lucide-react-native";
 import { useMemo } from "react";
 import {
@@ -30,10 +32,11 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useApp } from "@/providers/AppProvider";
+import { SHIFT_CANCEL_PENALTY } from "@/types";
 
 export default function ManagementScreen() {
   const router = useRouter();
-  const { currentUser, shifts, logout, getUnfilledShiftsWarning, deleteShift, updateShift } = useApp();
+  const { currentUser, shifts, logout, getUnfilledShiftsWarning, deleteShift, updateShift, approveCancellation } = useApp();
 
   const unfilledCount = getUnfilledShiftsWarning();
 
@@ -45,9 +48,10 @@ export default function ManagementScreen() {
     });
   }, [shifts]);
 
-  const handleLogout = () => {
-    logout();
-    router.replace("/" as never);
+  const handleLogout = async () => {
+    await logout();
+    router.dismissAll();
+    router.replace("/");
   };
 
   const handleDeleteShift = (shiftId: string) => {
@@ -69,6 +73,32 @@ export default function ManagementScreen() {
 
   const handleToggleUrgent = (shiftId: string, currentUrgent?: boolean) => {
     updateShift(shiftId, { isUrgent: !currentUrgent });
+  };
+
+  const handleApproveCancellation = (shiftId: string, withPenalty: boolean) => {
+    const penaltyAmount = SHIFT_CANCEL_PENALTY;
+    const msg = withPenalty 
+      ? `Подтвердить отмену и наложить штраф ${penaltyAmount} сом?`
+      : "Подтвердить отмену без штрафа?";
+      
+    if (Platform.OS === "web") {
+      if (confirm(msg)) {
+        approveCancellation(shiftId, withPenalty);
+      }
+    } else {
+      Alert.alert(
+        "Подтверждение отмены",
+        msg,
+        [
+          { text: "Отмена", style: "cancel" },
+          { 
+            text: "Подтвердить", 
+            onPress: () => approveCancellation(shiftId, withPenalty),
+            style: withPenalty ? "destructive" : "default"
+          },
+        ]
+      );
+    }
   };
 
   const formatDate = (dateStr: string) => {
@@ -226,6 +256,12 @@ export default function ManagementScreen() {
                       <Text style={styles.urgentText}>Срочно</Text>
                     </View>
                   )}
+                  {item.cancellationRequested && (
+                    <View style={styles.cancellationBadge}>
+                      <XCircle size={12} color="#DC2626" strokeWidth={2} />
+                      <Text style={styles.cancellationText}>Запрос отмены</Text>
+                    </View>
+                  )}
                 </View>
                 <View
                   style={[
@@ -270,23 +306,44 @@ export default function ManagementScreen() {
               </View>
 
               <View style={styles.shiftActions}>
-                <TouchableOpacity
-                  style={[styles.actionButton, styles.urgentButton, item.isUrgent && styles.urgentButtonActive]}
-                  onPress={() => handleToggleUrgent(item.id, item.isUrgent)}
-                >
-                  <Zap size={16} color={item.isUrgent ? "#FFFFFF" : "#F59E0B"} strokeWidth={2} />
-                  <Text style={[styles.actionButtonText, item.isUrgent ? { color: "#FFFFFF" } : { color: "#F59E0B" }]}>
-                    {item.isUrgent ? "Срочно!" : "Срочно"}
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.actionButton, styles.deleteButton]}
-                  onPress={() => handleDeleteShift(item.id)}
-                >
-                  <Trash2 size={16} color="#DC2626" strokeWidth={2} />
-                  <Text style={[styles.actionButtonText, { color: "#DC2626" }]}>Удалить</Text>
-                </TouchableOpacity>
+                {item.cancellationRequested && currentUser?.position === "Директор" ? (
+                  <View style={styles.cancellationActions}>
+                    <TouchableOpacity
+                      style={[styles.actionButton, styles.approvePenaltyButton]}
+                      onPress={() => handleApproveCancellation(item.id, true)}
+                    >
+                      <Banknote size={16} color="#DC2626" strokeWidth={2} />
+                      <Text style={[styles.actionButtonText, { color: "#DC2626" }]}>Отмена + Штраф</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.actionButton, styles.approveButton]}
+                      onPress={() => handleApproveCancellation(item.id, false)}
+                    >
+                      <CheckCircle size={16} color="#15803D" strokeWidth={2} />
+                      <Text style={[styles.actionButtonText, { color: "#15803D" }]}>Отмена (без штрафа)</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <>
+                    <TouchableOpacity
+                      style={[styles.actionButton, styles.urgentButton, item.isUrgent && styles.urgentButtonActive]}
+                      onPress={() => handleToggleUrgent(item.id, item.isUrgent)}
+                    >
+                      <Zap size={16} color={item.isUrgent ? "#FFFFFF" : "#F59E0B"} strokeWidth={2} />
+                      <Text style={[styles.actionButtonText, item.isUrgent ? { color: "#FFFFFF" } : { color: "#F59E0B" }]}>
+                        {item.isUrgent ? "Срочно!" : "Срочно"}
+                      </Text>
+                    </TouchableOpacity>
+    
+                    <TouchableOpacity
+                      style={[styles.actionButton, styles.deleteButton]}
+                      onPress={() => handleDeleteShift(item.id)}
+                    >
+                      <Trash2 size={16} color="#DC2626" strokeWidth={2} />
+                      <Text style={[styles.actionButtonText, { color: "#DC2626" }]}>Удалить</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
               </View>
             </View>
           )}
@@ -506,20 +563,47 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   statusBadgeFree: {
-    backgroundColor: "#DCFCE7",
+    backgroundColor: "#DBEAFE",
   },
   statusBadgeBooked: {
-    backgroundColor: "#DBEAFE",
+    backgroundColor: "#DCFCE7",
   },
   statusText: {
     fontSize: 12,
     fontWeight: "600" as const,
   },
   statusTextFree: {
-    color: "#15803D",
+    color: "#1E40AF",
   },
   statusTextBooked: {
-    color: "#1E40AF",
+    color: "#15803D",
+  },
+  cancellationBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#FEE2E2",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginLeft: 8,
+  },
+  cancellationText: {
+    fontSize: 10,
+    fontWeight: "700",
+    color: "#DC2626",
+  },
+  cancellationActions: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  approvePenaltyButton: {
+    backgroundColor: "#FEF2F2",
+    borderColor: "#FECACA",
+  },
+  approveButton: {
+    backgroundColor: "#F0FDF4",
+    borderColor: "#86EFAC",
   },
   shiftInfo: {
     gap: 8,

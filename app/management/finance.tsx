@@ -3,6 +3,9 @@ import {
   Banknote,
   Calculator,
   Calendar,
+  ChevronDown,
+  ChevronUp,
+  Download,
   TrendingDown,
   User as UserIcon,
   Award,
@@ -18,6 +21,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import * as FileSystem from "expo-file-system";
+import * as Sharing from "expo-sharing";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useApp } from "@/providers/AppProvider";
 import { EMPLOYEE_POSITIONS, SalaryCalculation } from "@/types";
@@ -59,6 +64,48 @@ export default function FinanceScreen() {
   const [bonusReason, setBonusReason] = useState("");
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [showEndPicker, setShowEndPicker] = useState(false);
+  const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
+
+  const toggleCard = (employeeId: string) => {
+    setExpandedCards((prev) => ({ ...prev, [employeeId]: !prev[employeeId] }));
+  };
+
+  const handleExportExcel = async () => {
+    if (Platform.OS === "web") {
+      alert("Экспорт в Excel (CSV) доступен только в мобильном приложении");
+      return;
+    }
+
+    let csvContent = "Сотрудник,Отработано (ч),Ставка,База,KPI,Итог (до штрафов),Премии,Штрафы,Недостачи,Авансы,К выдаче\n";
+    salaryCalculations.forEach((s) => {
+      const row = [
+        s.employeeName,
+        s.hoursWorked.toFixed(2),
+        s.hourlyRate,
+        s.baseAmount.toFixed(2),
+        s.kpiCoefficient.toFixed(2),
+        s.adjustedAmount.toFixed(2),
+        s.bonuses.toFixed(2),
+        s.penalties.toFixed(2),
+        s.shortages.toFixed(2),
+        s.advances.toFixed(2),
+        s.totalPayout.toFixed(2),
+      ].join(",");
+      csvContent += row + "\n";
+    });
+
+    try {
+      const fileUri = FileSystem.documentDirectory + "salary_report.csv";
+      await FileSystem.writeAsStringAsync(fileUri, csvContent, {
+        encoding: "utf8",
+      });
+      await Sharing.shareAsync(fileUri);
+    } catch (error) {
+      Alert.alert("Ошибка", "Не удалось экспортировать файл");
+      console.error(error);
+    }
+  };
+
 
   const onStartChange = (event: any, selectedDate?: Date) => {
     setShowStartPicker(false);
@@ -278,122 +325,157 @@ export default function FinanceScreen() {
     return `${amount.toFixed(2)} сом`;
   };
 
-  const renderSalaryCard = (salary: SalaryCalculation) => (
-    <View key={salary.employeeId} style={styles.salaryCard}>
-      <View style={styles.salaryHeader}>
-        <View style={styles.employeeRow}>
-          <UserIcon size={18} color="#2563EB" strokeWidth={2} />
-          <Text style={styles.employeeName}>{salary.employeeName}</Text>
-        </View>
-        <Text style={styles.totalPayoutBadge}>{formatCurrency(salary.totalPayout)}</Text>
+  const renderSalaryCard = (salary: SalaryCalculation) => {
+    const isExpanded = expandedCards[salary.employeeId];
+    return (
+      <View key={salary.employeeId} style={styles.salaryCard}>
+        <TouchableOpacity 
+          style={styles.salaryHeader} 
+          onPress={() => toggleCard(salary.employeeId)}
+          activeOpacity={0.7}
+        >
+          <View style={styles.headerLeft}>
+            <View style={styles.employeeRow}>
+              <UserIcon size={18} color="#2563EB" strokeWidth={2} />
+              <Text style={styles.employeeName}>{salary.employeeName}</Text>
+            </View>
+            {salary.remainingAmount !== 0 && (
+               <Text style={[
+                  styles.miniBadge, 
+                  salary.remainingAmount > 0 ? { color: "#15803D" } : { color: "#DC2626" }
+               ]}>
+                 {salary.remainingAmount > 0 ? "К выплате: " : "Долг: "}
+                 {formatCurrency(Math.abs(salary.remainingAmount))}
+               </Text>
+            )}
+          </View>
+          <View style={styles.headerRight}>
+             {isExpanded ? (
+               <ChevronUp size={20} color="#6B7280" />
+             ) : (
+               <ChevronDown size={20} color="#6B7280" />
+             )}
+          </View>
+        </TouchableOpacity>
+
+        {isExpanded && (
+          <View style={styles.salaryDetails}>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Отработано часов:</Text>
+              <Text style={styles.detailValue}>{salary.hoursWorked.toFixed(1)} ч</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Ставка:</Text>
+              <Text style={styles.detailValue}>{salary.hourlyRate} сом/час</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Базовая сумма:</Text>
+              <Text style={styles.detailValue}>{formatCurrency(salary.baseAmount)}</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>KPI коэффициент:</Text>
+              <Text style={[styles.detailValue, { color: salary.kpiCoefficient >= 1 ? "#15803D" : "#DC2626" }]}>
+                ×{salary.kpiCoefficient.toFixed(2)}
+              </Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>После KPI:</Text>
+              <Text style={styles.detailValue}>{formatCurrency(salary.adjustedAmount)}</Text>
+            </View>
+
+            {salary.bonuses > 0 && (
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Премии:</Text>
+                <Text style={[styles.detailValue, { color: "#15803D" }]}>+{formatCurrency(salary.bonuses)}</Text>
+              </View>
+            )}
+
+            {(salary.penalties > 0 || salary.shortages > 0 || salary.advances > 0) && (
+              <View style={styles.deductionsSection}>
+                <Text style={styles.deductionsTitle}>Удержания:</Text>
+                {salary.penalties > 0 && (
+                  <View style={styles.deductionRow}>
+                    <Text style={styles.deductionLabel}>Штрафы:</Text>
+                    <Text style={styles.deductionValue}>-{formatCurrency(salary.penalties)}</Text>
+                  </View>
+                )}
+                {salary.shortages > 0 && (
+                  <View style={styles.deductionRow}>
+                    <Text style={styles.deductionLabel}>Недостачи:</Text>
+                    <Text style={styles.deductionValue}>-{formatCurrency(salary.shortages)}</Text>
+                  </View>
+                )}
+                {salary.advances > 0 && (
+                  <View style={styles.deductionRow}>
+                    <Text style={styles.deductionLabel}>Авансы:</Text>
+                    <Text style={styles.deductionValue}>-{formatCurrency(salary.advances)}</Text>
+                  </View>
+                )}
+              </View>
+            )}
+
+            <View style={styles.totalRow}>
+              <Text style={styles.totalLabel}>Заработано (до авансов):</Text>
+              <Text style={styles.totalValue}>{formatCurrency(salary.netSalary)}</Text>
+            </View>
+
+            <View style={styles.paymentStatusRow}>
+               <View>
+                <Text style={styles.detailLabel}>Авансы:</Text>
+                <Text style={[styles.detailValue, { color: "#DC2626" }]}>-{formatCurrency(salary.advances)}</Text>
+              </View>
+              <View>
+                <Text style={styles.detailLabel}>К выплате:</Text>
+                <Text style={styles.detailValue}>{formatCurrency(salary.totalPayout)}</Text>
+              </View>
+            </View>
+
+            <View style={styles.paymentStatusRow}>
+              <View>
+                <Text style={styles.detailLabel}>Выплачено ЗП:</Text>
+                <Text style={[styles.detailValue, { color: "#15803D" }]}>{formatCurrency(salary.paidAmount)}</Text>
+              </View>
+              <View>
+                <Text style={styles.detailLabel}>Остаток:</Text>
+                <Text
+                  style={[
+                    styles.totalValue,
+                    { fontSize: 18, color: salary.remainingAmount < 0 ? "#DC2626" : "#15803D" },
+                  ]}
+                >
+                  {formatCurrency(salary.remainingAmount)}
+                </Text>
+              </View>
+            </View>
+
+            {salary.remainingAmount > 0 && (
+              <TouchableOpacity
+                style={styles.payButton}
+                onPress={() => handlePaySalary(salary)}
+              >
+                <Banknote size={16} color="#FFFFFF" strokeWidth={2} />
+                <Text style={styles.payButtonText}>Выплатить остаток</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
       </View>
+    );
+  };
 
-      <View style={styles.salaryDetails}>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Отработано часов:</Text>
-          <Text style={styles.detailValue}>{salary.hoursWorked.toFixed(1)} ч</Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Ставка:</Text>
-          <Text style={styles.detailValue}>{salary.hourlyRate} сом/час</Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>Базовая сумма:</Text>
-          <Text style={styles.detailValue}>{formatCurrency(salary.baseAmount)}</Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>KPI коэффициент:</Text>
-          <Text style={[styles.detailValue, { color: salary.kpiCoefficient >= 1 ? "#15803D" : "#DC2626" }]}>
-            ×{salary.kpiCoefficient.toFixed(2)}
-          </Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Text style={styles.detailLabel}>После KPI:</Text>
-          <Text style={styles.detailValue}>{formatCurrency(salary.adjustedAmount)}</Text>
-        </View>
-
-        {salary.bonuses > 0 && (
-          <View style={styles.detailRow}>
-            <Text style={styles.detailLabel}>Премии:</Text>
-            <Text style={[styles.detailValue, { color: "#15803D" }]}>+{formatCurrency(salary.bonuses)}</Text>
-          </View>
-        )}
-
-        {(salary.penalties > 0 || salary.shortages > 0 || salary.advances > 0) && (
-          <View style={styles.deductionsSection}>
-            <Text style={styles.deductionsTitle}>Удержания:</Text>
-            {salary.penalties > 0 && (
-              <View style={styles.deductionRow}>
-                <Text style={styles.deductionLabel}>Штрафы:</Text>
-                <Text style={styles.deductionValue}>-{formatCurrency(salary.penalties)}</Text>
-              </View>
-            )}
-            {salary.shortages > 0 && (
-              <View style={styles.deductionRow}>
-                <Text style={styles.deductionLabel}>Недостачи:</Text>
-                <Text style={styles.deductionValue}>-{formatCurrency(salary.shortages)}</Text>
-              </View>
-            )}
-            {salary.advances > 0 && (
-              <View style={styles.deductionRow}>
-                <Text style={styles.deductionLabel}>Авансы:</Text>
-                <Text style={styles.deductionValue}>-{formatCurrency(salary.advances)}</Text>
-              </View>
-            )}
-          </View>
-        )}
-
-        <View style={styles.totalRow}>
-          <Text style={styles.totalLabel}>Заработано (до авансов):</Text>
-          <Text style={styles.totalValue}>{formatCurrency(salary.netSalary)}</Text>
-        </View>
-
-        <View style={styles.paymentStatusRow}>
-           <View>
-            <Text style={styles.detailLabel}>Авансы:</Text>
-            <Text style={[styles.detailValue, { color: "#DC2626" }]}>-{formatCurrency(salary.advances)}</Text>
-          </View>
-          <View>
-            <Text style={styles.detailLabel}>К выплате:</Text>
-            <Text style={styles.detailValue}>{formatCurrency(salary.totalPayout)}</Text>
-          </View>
-        </View>
-
-        <View style={styles.paymentStatusRow}>
-          <View>
-            <Text style={styles.detailLabel}>Выплачено ЗП:</Text>
-            <Text style={[styles.detailValue, { color: "#15803D" }]}>{formatCurrency(salary.paidAmount)}</Text>
-          </View>
-          <View>
-            <Text style={styles.detailLabel}>Остаток:</Text>
-            <Text
-              style={[
-                styles.totalValue,
-                { fontSize: 18, color: salary.remainingAmount < 0 ? "#DC2626" : "#15803D" },
-              ]}
-            >
-              {formatCurrency(salary.remainingAmount)}
-            </Text>
-          </View>
-        </View>
-
-        {salary.remainingAmount > 0 && (
-          <TouchableOpacity
-            style={styles.payButton}
-            onPress={() => handlePaySalary(salary)}
-          >
-            <Banknote size={16} color="#FFFFFF" strokeWidth={2} />
-            <Text style={styles.payButtonText}>Выплатить остаток</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    </View>
-  );
 
   return (
     <SafeAreaView style={styles.container} edges={["bottom"]}>
       <View style={styles.periodSectionHeader}>
-        <Text style={styles.periodTitle}>Период расчёта</Text>
+        <View style={styles.periodHeaderTop}>
+          <Text style={styles.periodTitle}>Период расчёта</Text>
+          {selectedTab === "salary" && (
+            <TouchableOpacity style={styles.exportButton} onPress={handleExportExcel}>
+              <Download size={16} color="#2563EB" strokeWidth={2} />
+              <Text style={styles.exportButtonText}>Excel</Text>
+            </TouchableOpacity>
+          )}
+        </View>
         <View style={styles.periodInputs}>
           <View style={styles.periodInput}>
             <Calendar size={16} color="#6B7280" strokeWidth={2} />
@@ -830,11 +912,32 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#E5E7EB",
   },
+  periodHeaderTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  exportButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#EFF6FF",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+  },
+  exportButtonText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#2563EB",
+  },
   periodTitle: {
     fontSize: 14,
     fontWeight: "600" as const,
     color: "#374151",
-    marginBottom: 8,
   },
   periodInputs: {
     flexDirection: "row",
@@ -900,10 +1003,23 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 14,
     paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#F3F4F6",
+  },
+  headerLeft: {
+    gap: 4,
+  },
+  headerRight: {
+    padding: 4,
+  },
+  miniBadge: {
+    fontSize: 11,
+    fontWeight: "600",
+  },
+  salaryDetails: {
+    marginTop: 12,
+    gap: 8,
   },
   employeeRow: {
     flexDirection: "row",
@@ -923,9 +1039,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
-  },
-  salaryDetails: {
-    gap: 8,
   },
   detailRow: {
     flexDirection: "row",

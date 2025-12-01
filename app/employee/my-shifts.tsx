@@ -9,6 +9,7 @@ import {
   Navigation,
   User as UserIcon,
   Zap,
+  XCircle,
 } from "lucide-react-native";
 import { useMemo } from "react";
 import {
@@ -22,11 +23,11 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useApp } from "@/providers/AppProvider";
-import { Shift } from "@/types";
+import { Shift, SHIFT_CANCEL_PENALTY } from "@/types";
 
 export default function MyShiftsScreen() {
   const router = useRouter();
-  const { currentUser, getEmployeeShifts, markArrival, closeShift, updateShift, getEmployeeIncompleteTasks, canCloseShift } = useApp();
+  const { currentUser, getEmployeeShifts, markArrival, closeShift, updateShift, getEmployeeIncompleteTasks, canCloseShift, requestShiftCancellation } = useApp();
 
   const myShifts = useMemo(() => {
     if (!currentUser) return [];
@@ -93,6 +94,36 @@ export default function MyShiftsScreen() {
       alert(msg);
     } else {
       Alert.alert("Успешно", msg);
+    }
+  };
+
+  const handleCancelShift = (shiftId: string) => {
+    const penaltyAmount = SHIFT_CANCEL_PENALTY;
+    const msg = `Вы уверены, что хотите отменить смену?\n\nВнимание: За отмену смены предусмотрен штраф в размере ${penaltyAmount} сом.\n\nВаш запрос будет отправлен директору на согласование.`;
+
+    const confirmCancel = () => {
+      requestShiftCancellation(shiftId);
+      const successMsg = "Запрос на отмену отправлен. Ожидайте решения директора.";
+      if (Platform.OS === "web") {
+        alert(successMsg);
+      } else {
+        Alert.alert("Запрос отправлен", successMsg);
+      }
+    };
+
+    if (Platform.OS === "web") {
+      if (confirm(msg)) {
+        confirmCancel();
+      }
+    } else {
+      Alert.alert(
+        "Отмена смены",
+        msg,
+        [
+          { text: "Не отменять", style: "cancel" },
+          { text: "Согласен на штраф", style: "destructive", onPress: confirmCancel },
+        ]
+      );
     }
   };
 
@@ -220,6 +251,12 @@ export default function MyShiftsScreen() {
                       {isLate ? "Опоздание!" : item.status}
                     </Text>
                   </View>
+                  {item.cancellationRequested && (
+                    <View style={styles.cancellationBadge}>
+                       <XCircle size={14} color="#DC2626" strokeWidth={2} />
+                       <Text style={styles.cancellationText}>Запрошена отмена</Text>
+                    </View>
+                  )}
                 </View>
 
                 {isWarning && (
@@ -266,7 +303,17 @@ export default function MyShiftsScreen() {
                   )}
                 </View>
 
-                {canMarkOnWay(item) && !item.arrivedAt && (
+                {item.status === "Забронировано" && !item.arrivedAt && !item.cancellationRequested && !isLate && (
+                  <TouchableOpacity
+                    style={styles.cancelButton}
+                    onPress={() => handleCancelShift(item.id)}
+                  >
+                    <XCircle size={18} color="#DC2626" strokeWidth={2} />
+                    <Text style={styles.cancelButtonText}>Отменить смену</Text>
+                  </TouchableOpacity>
+                )}
+
+                {canMarkOnWay(item) && !item.arrivedAt && !item.cancellationRequested && (
                   <TouchableOpacity
                     style={styles.onWayButton}
                     onPress={() => handleMarkOnWay(item.id)}
@@ -528,9 +575,42 @@ const styles = StyleSheet.create({
   closeShiftButtonDisabled: {
     backgroundColor: "#9CA3AF",
   },
+  cancellationBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#FEE2E2",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginTop: 8,
+    alignSelf: "flex-start",
+  },
+  cancellationText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#DC2626",
+  },
+  cancelButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#FEF2F2",
+    borderRadius: 10,
+    paddingVertical: 12,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: "#FECACA",
+  },
+  cancelButtonText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#DC2626",
+  },
   closeShiftButtonText: {
     fontSize: 15,
-    fontWeight: "600" as const,
+    fontWeight: "600",
     color: "#FFFFFF",
   },
   onWayBadge: {
