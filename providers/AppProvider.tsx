@@ -825,28 +825,55 @@ export const [AppProvider, useApp] = createContextHook(() => {
     [replacements, saveReplacements]
   );
 
-  const cancelShift = useCallback(
-    (shiftId: string, originalEmployeeId: string) => {
+  const requestShiftCancellation = useCallback(
+    (shiftId: string) => {
+      const newShifts = shifts.map((s) =>
+        s.id === shiftId
+          ? { ...s, cancellationRequested: true }
+          : s
+      );
+      saveShifts(newShifts);
+    },
+    [shifts, saveShifts]
+  );
+
+  const approveCancellation = useCallback(
+    (shiftId: string, applyPenalty: boolean) => {
       const shift = shifts.find((s) => s.id === shiftId);
       if (!shift) return;
 
+      const employeeId = shift.employeeId;
+      const employeeName = shift.employeeName;
+
+      // Free the shift
       const newShifts = shifts.map((s) =>
         s.id === shiftId
-          ? { ...s, status: "Свободно" as ShiftStatus, employeeId: undefined, employeeName: undefined }
+          ? {
+              ...s,
+              status: "Свободно" as ShiftStatus,
+              employeeId: undefined,
+              employeeName: undefined,
+              cancellationRequested: undefined,
+              arrivedAt: undefined,
+              employeeStatus: undefined,
+            }
           : s
       );
       saveShifts(newShifts);
 
-      const penalty: Penalty = {
-        id: Date.now().toString(),
-        employeeId: originalEmployeeId,
-        employeeName: shift.employeeName || "",
-        amount: SHIFT_CANCEL_PENALTY,
-        reason: "Отмена смены",
-        date: new Date().toISOString(),
-        createdBy: "Система",
-      };
-      addPenalty(penalty);
+      // Apply penalty if needed
+      if (applyPenalty && employeeId && employeeName) {
+         const penalty: Penalty = {
+          id: Date.now().toString(),
+          employeeId,
+          employeeName,
+          amount: SHIFT_CANCEL_PENALTY,
+          reason: "Отмена смены (штраф)",
+          date: new Date().toISOString(),
+          createdBy: "Система",
+        };
+        addPenalty(penalty);
+      }
     },
     [shifts, saveShifts, addPenalty]
   );
@@ -1239,7 +1266,8 @@ export const [AppProvider, useApp] = createContextHook(() => {
     getEmployeeKPI,
     calculateKPICoefficient,
     addReplacement,
-    cancelShift,
+    requestShiftCancellation,
+    approveCancellation,
     calculateEmployeeSalary,
     getShiftsRequiringArrival,
     getLateShifts,

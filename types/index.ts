@@ -47,6 +47,7 @@ export interface Shift {
   arrivedAt?: string;
   employeeStatus?: EmployeeStatus;
   isUrgent?: boolean;
+  cancellationRequested?: boolean;
 }
 
 export interface ShiftTemplate {
@@ -205,7 +206,7 @@ export interface ShiftReplacement {
   date: string;
 }
 
-export type TrainingMaterialType = "text" | "pdf" | "video" | "document";
+export type TrainingMaterialType = "text" | "pdf" | "video";
 
 export type MaterialAssignmentStatus = "assigned" | "viewed" | "passed";
 
