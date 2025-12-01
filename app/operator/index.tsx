@@ -32,9 +32,6 @@ export default function OperatorScreen() {
 
   const handleLogout = () => {
     logout();
-    if (router.canGoBack()) {
-      router.dismissAll();
-    }
     router.replace("/" as never);
   };
 

@@ -5,7 +5,6 @@ import {
   Banknote,
   BookOpen,
   Calendar,
-  CheckSquare,
   Clock,
   ClipboardList,
   History,
@@ -50,7 +49,6 @@ export default function ManagementScreen() {
 
   const handleLogout = async () => {
     await logout();
-    router.dismissAll();
     router.replace("/");
   };
 
