@@ -21,8 +21,8 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
+import { File, Paths } from "expo-file-system";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useApp } from "@/providers/AppProvider";
 import { EMPLOYEE_POSITIONS, SalaryCalculation } from "@/types";
@@ -95,11 +95,10 @@ export default function FinanceScreen() {
     });
 
     try {
-      const fileUri = FileSystem.documentDirectory + "salary_report.csv";
-      await FileSystem.writeAsStringAsync(fileUri, csvContent, {
-        encoding: "utf8",
-      });
-      await Sharing.shareAsync(fileUri);
+      const file = new File(Paths.cache, "salary_report.csv");
+      file.create();
+      file.write(csvContent);
+      await Sharing.shareAsync(file.uri);
     } catch (error) {
       Alert.alert("Ошибка", "Не удалось экспортировать файл");
       console.error(error);

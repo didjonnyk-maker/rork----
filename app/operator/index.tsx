@@ -1,6 +1,7 @@
 import { useRouter } from "expo-router";
 import {
   CheckCircle,
+  ChevronLeft,
   Clock,
   FileText,
   LogOut,
@@ -31,7 +32,18 @@ export default function OperatorScreen() {
 
   const handleLogout = () => {
     logout();
+    if (router.canGoBack()) {
+      router.dismissAll();
+    }
     router.replace("/" as never);
+  };
+
+  const handleBack = () => {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/management/" as never);
+    }
   };
 
   const formatDate = (dateStr: string) => {
@@ -52,9 +64,16 @@ export default function OperatorScreen() {
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <View style={styles.header}>
-        <View>
-          <Text style={styles.headerTitle}>Проверка отчётов</Text>
-          <Text style={styles.headerSubtitle}>{currentUser?.name}</Text>
+        <View style={styles.headerLeft}>
+          {currentUser?.role !== "Операционист" && (
+            <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+              <ChevronLeft size={24} color="#111827" strokeWidth={2} />
+            </TouchableOpacity>
+          )}
+          <View>
+            <Text style={styles.headerTitle}>Проверка отчётов</Text>
+            <Text style={styles.headerSubtitle}>{currentUser?.name}</Text>
+          </View>
         </View>
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <LogOut size={20} color="#EF4444" strokeWidth={2} />
@@ -172,6 +191,15 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
     borderBottomWidth: 1,
     borderBottomColor: "#E5E7EB",
+  },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  backButton: {
+    padding: 4,
+    marginLeft: -8,
   },
   headerTitle: {
     fontSize: 24,
