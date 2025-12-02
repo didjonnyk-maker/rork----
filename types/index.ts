@@ -1,4 +1,4 @@
-export type UserRole = "Сотрудник" | "Операционист" | "Администратор" | "Директор";
+export type UserRole = "Сотрудник" | "Операционист" | "Администратор" | "Директор" | "Учредитель";
 
 export type Position = 
   | "Кассир" 
@@ -6,7 +6,8 @@ export type Position =
   | "Универсал" 
   | "Операционист-кассир" 
   | "Администратор" 
-  | "Директор";
+  | "Директор"
+  | "Учредитель";
 
 export type ShiftStatus = 
   | "Свободно" 
@@ -170,7 +171,7 @@ export interface Bonus {
 }
 
 export const EMPLOYEE_POSITIONS: Position[] = ["Кассир", "Продавец", "Универсал"];
-export const ADMIN_POSITIONS: Position[] = ["Операционист-кассир", "Администратор", "Директор"];
+export const ADMIN_POSITIONS: Position[] = ["Операционист-кассир", "Администратор", "Директор", "Учредитель"];
 export const ALL_POSITIONS: Position[] = [...EMPLOYEE_POSITIONS, ...ADMIN_POSITIONS];
 
 export const ROLE_BY_POSITION: Record<Position, UserRole> = {
@@ -180,6 +181,7 @@ export const ROLE_BY_POSITION: Record<Position, UserRole> = {
   "Операционист-кассир": "Операционист",
   "Администратор": "Администратор",
   "Директор": "Директор",
+  "Учредитель": "Учредитель",
 };
 
 export const DEFAULT_HOURLY_RATE = 120;

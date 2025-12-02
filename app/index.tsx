@@ -59,6 +59,8 @@ export default function LoginScreen() {
         router.replace("/management/" as never);
       } else if (role === "Операционист") {
         router.replace("/operator/" as never);
+      } else if (role === "Учредитель") {
+        router.replace("/founder/" as never);
       } else {
         router.replace("/employee/" as never);
       }
