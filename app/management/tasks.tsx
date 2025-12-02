@@ -49,10 +49,11 @@ export default function TasksScreen() {
   const isDirector = currentUser?.role === "Директор";
 
   const targetEmployees = useMemo(
-    () => users.filter((u) => 
-      u.role === "Администратор" || u.role === "Операционист" || EMPLOYEE_POSITIONS.includes(u.position as typeof EMPLOYEE_POSITIONS[number])
-    ),
-    [users]
+    () => users.filter((u) => {
+      if (u.marketId && u.marketId !== selectedMarketId) return false;
+      return u.role === "Администратор" || u.role === "Операционист" || EMPLOYEE_POSITIONS.includes(u.position as typeof EMPLOYEE_POSITIONS[number]);
+    }),
+    [users, selectedMarketId]
   );
 
   const filteredTasks = useMemo(() => {
@@ -416,7 +417,7 @@ export default function TasksScreen() {
                           newTaskAssignee === emp.id && styles.assigneeChipTextActive,
                         ]}
                       >
-                        {emp.name}
+                        {emp.name} ({emp.role})
                       </Text>
                     </TouchableOpacity>
                   ))}

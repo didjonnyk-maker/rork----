@@ -4,24 +4,74 @@ import {
   Clock,
   AlertCircle,
   Eye,
+  Plus,
+  XCircle,
+  Send,
 } from "lucide-react-native";
 import {
+  Alert,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useApp } from "@/providers/AppProvider";
 import { Task } from "@/types";
+import { useState } from "react";
 
 export default function FounderManagementTasksScreen() {
-  const { tasks, users } = useApp();
+  const { tasks, users, addTask, currentUser } = useApp();
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [newTaskDescription, setNewTaskDescription] = useState("");
+  const [newTaskAssignee, setNewTaskAssignee] = useState("");
+
+  const managementUsers = users.filter((u) => u.role === "Директор" || u.role === "Администратор");
 
   const managementTasks = tasks.filter((t) => {
     const user = users.find((u) => u.id === t.assignedTo || u.id === t.takenBy);
     return user && (user.role === "Директор" || user.role === "Администратор");
   });
+
+  const handleAddTask = () => {
+    if (!newTaskTitle.trim()) {
+      const msg = "Заполните название задания";
+      if (Platform.OS === "web") {
+        alert(msg);
+      } else {
+        Alert.alert("Ошибка", msg);
+      }
+      return;
+    }
+
+    const task: Task = {
+      id: Date.now().toString(),
+      marketId: "danek",
+      title: newTaskTitle.trim(),
+      description: newTaskDescription.trim() || undefined,
+      assignedTo: newTaskAssignee || undefined,
+      createdBy: currentUser?.id || "",
+      status: newTaskAssignee ? "Новое" : "Доступно",
+      createdAt: new Date().toISOString(),
+    };
+
+    addTask(task);
+    setNewTaskTitle("");
+    setNewTaskDescription("");
+    setNewTaskAssignee("");
+    setShowAddForm(false);
+
+    const successMsg = "Задание создано!";
+    if (Platform.OS === "web") {
+      alert(successMsg);
+    } else {
+      Alert.alert("Успешно", successMsg);
+    }
+  };
 
   const getStatusColor = (status: Task["status"]) => {
     switch (status) {
@@ -82,6 +132,111 @@ export default function FounderManagementTasksScreen() {
           title: "Задачи для руководства",
         }}
       />
+      <View style={styles.header}>
+        <View style={styles.headerTop}>
+          <Text style={styles.headerTitle}>Задачи для руководства</Text>
+        </View>
+
+        <TouchableOpacity
+          style={styles.addTaskButton}
+          onPress={() => setShowAddForm(!showAddForm)}
+        >
+          {showAddForm ? (
+            <XCircle size={18} color="#FFFFFF" strokeWidth={2} />
+          ) : (
+            <Plus size={18} color="#FFFFFF" strokeWidth={2} />
+          )}
+          <Text style={styles.addTaskButtonText}>
+            {showAddForm ? "Отмена" : "Создать задание"}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {showAddForm && (
+        <View style={styles.addFormContainer}>
+          <View style={styles.addForm}>
+            <View style={styles.formField}>
+              <Text style={styles.formLabel}>Название</Text>
+              <TextInput
+                style={styles.formInput}
+                value={newTaskTitle}
+                onChangeText={setNewTaskTitle}
+                placeholder="Введите название задания"
+                placeholderTextColor="#9CA3AF"
+              />
+            </View>
+
+            <View style={styles.formField}>
+              <Text style={styles.formLabel}>Описание (опционально)</Text>
+              <TextInput
+                style={[styles.formInput, styles.formTextarea]}
+                value={newTaskDescription}
+                onChangeText={setNewTaskDescription}
+                placeholder="Введите описание задания"
+                placeholderTextColor="#9CA3AF"
+                multiline
+                numberOfLines={3}
+              />
+            </View>
+
+            <View style={styles.formField}>
+              <Text style={styles.formLabel}>Назначить</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <View style={styles.assigneeChips}>
+                  <TouchableOpacity
+                    style={[
+                      styles.assigneeChip,
+                      !newTaskAssignee && styles.assigneeChipActive,
+                    ]}
+                    onPress={() => setNewTaskAssignee("")}
+                  >
+                    <Text
+                      style={[
+                        styles.assigneeChipText,
+                        !newTaskAssignee && styles.assigneeChipTextActive,
+                      ]}
+                    >
+                      Всем
+                    </Text>
+                  </TouchableOpacity>
+                  {managementUsers.map((user) => (
+                    <TouchableOpacity
+                      key={user.id}
+                      style={[
+                        styles.assigneeChip,
+                        newTaskAssignee === user.id && styles.assigneeChipActive,
+                      ]}
+                      onPress={() => setNewTaskAssignee(user.id)}
+                    >
+                      <Text
+                        style={[
+                          styles.assigneeChipText,
+                          newTaskAssignee === user.id && styles.assigneeChipTextActive,
+                        ]}
+                      >
+                        {user.name} ({user.role})
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
+            </View>
+
+            <TouchableOpacity
+              style={[
+                styles.submitButton,
+                !newTaskTitle.trim() && styles.submitButtonDisabled,
+              ]}
+              onPress={handleAddTask}
+              disabled={!newTaskTitle.trim()}
+            >
+              <Send size={18} color="#FFFFFF" strokeWidth={2} />
+              <Text style={styles.submitButtonText}>Создать задание</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -206,6 +361,108 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#F9FAFB",
+  },
+  header: {
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+  },
+  headerTop: {
+    marginBottom: 12,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: "700" as const,
+    color: "#111827",
+  },
+  addTaskButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#2563EB",
+    borderRadius: 10,
+    paddingVertical: 12,
+  },
+  addTaskButtonText: {
+    fontSize: 14,
+    fontWeight: "600" as const,
+    color: "#FFFFFF",
+  },
+  addFormContainer: {
+    backgroundColor: "#FFFFFF",
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E7EB",
+  },
+  addForm: {
+    padding: 16,
+    gap: 16,
+  },
+  formField: {
+    gap: 8,
+  },
+  formLabel: {
+    fontSize: 13,
+    fontWeight: "500" as const,
+    color: "#374151",
+  },
+  formInput: {
+    backgroundColor: "#F9FAFB",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: "#111827",
+  },
+  formTextarea: {
+    minHeight: 80,
+    textAlignVertical: "top" as const,
+  },
+  assigneeChips: {
+    flexDirection: "row",
+    gap: 8,
+    paddingVertical: 4,
+  },
+  assigneeChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: "#F3F4F6",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  assigneeChipActive: {
+    backgroundColor: "#2563EB",
+    borderColor: "#2563EB",
+  },
+  assigneeChipText: {
+    fontSize: 13,
+    fontWeight: "500" as const,
+    color: "#374151",
+  },
+  assigneeChipTextActive: {
+    color: "#FFFFFF",
+  },
+  submitButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#15803D",
+    borderRadius: 10,
+    paddingVertical: 14,
+  },
+  submitButtonDisabled: {
+    backgroundColor: "#9CA3AF",
+  },
+  submitButtonText: {
+    fontSize: 15,
+    fontWeight: "600" as const,
+    color: "#FFFFFF",
   },
   scrollView: {
     flex: 1,

@@ -397,7 +397,7 @@ export default function MaterialsScreen() {
               </View>
               {!formAssignAll && (
                 <View style={styles.groupsRow}>
-                  {EMPLOYEE_POSITIONS.map((pos) => (
+                  {[...EMPLOYEE_POSITIONS, "Операционист-кассир" as Position, "Администратор" as Position].map((pos) => (
                     <TouchableOpacity
                       key={pos}
                       style={[
