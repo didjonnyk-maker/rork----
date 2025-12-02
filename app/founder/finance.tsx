@@ -5,6 +5,8 @@ import {
   TrendingUp,
   TrendingDown,
   Eye,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react-native";
 import { useState, useMemo } from "react";
 import {
@@ -36,6 +38,11 @@ export default function FounderFinanceScreen() {
 
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [showEndPicker, setShowEndPicker] = useState(false);
+  const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
+
+  const toggleCard = (employeeId: string) => {
+    setExpandedCards((prev) => ({ ...prev, [employeeId]: !prev[employeeId] }));
+  };
 
   const onStartChange = (event: any, selectedDate?: Date) => {
     setShowStartPicker(false);
@@ -184,14 +191,28 @@ export default function FounderFinanceScreen() {
               <Text style={styles.viewOnlyText}>Просмотр</Text>
             </View>
           </View>
-          {employeeData.map((employee, index) => (
+          {employeeData.map((employee, index) => {
+            const isExpanded = expandedCards[employee.employeeId];
+            return (
             <View key={index} style={styles.employeeCard}>
-              <View style={styles.employeeHeader}>
-                <Text style={styles.employeeName}>{employee.employeeName}</Text>
-                <Text style={styles.employeePayout}>
-                  {employee.remainingAmount.toFixed(2)} ₽
-                </Text>
-              </View>
+              <TouchableOpacity 
+                style={styles.employeeHeader}
+                onPress={() => toggleCard(employee.employeeId)}
+                activeOpacity={0.7}
+              >
+                <View>
+                    <Text style={styles.employeeName}>{employee.employeeName}</Text>
+                    <Text style={styles.employeePayout}>
+                    {employee.remainingAmount.toFixed(2)} ₽
+                    </Text>
+                </View>
+                {isExpanded ? (
+                    <ChevronUp size={20} color="#6B7280" />
+                ) : (
+                    <ChevronDown size={20} color="#6B7280" />
+                )}
+              </TouchableOpacity>
+              {isExpanded && (
               <View style={styles.employeeDetails}>
                 <View style={styles.detailRow}>
                   <Text style={styles.detailLabel}>Отработано часов:</Text>
@@ -264,8 +285,9 @@ export default function FounderFinanceScreen() {
                   </View>
                 )}
               </View>
+              )}
             </View>
-          ))}
+          )})}
         </View>
       </ScrollView>
     </SafeAreaView>

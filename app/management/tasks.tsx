@@ -384,7 +384,7 @@ export default function TasksScreen() {
         <View style={styles.directorActions}>
             {canAccept && (
               <TouchableOpacity style={[styles.actionButton, styles.acceptButton]} onPress={() => handleAcceptTask(task.id)}>
-                <Text style={styles.actionButtonText}>Принять в работу</Text>
+                <Text style={styles.actionButtonText}>Принять</Text>
               </TouchableOpacity>
             )}
 
@@ -521,24 +521,29 @@ export default function TasksScreen() {
         )}
 
         {ratingTaskId === task.id && (
-          <View style={styles.ratingContainer}>
-            <Text style={styles.ratingTitle}>Оцените выполнение (1-5):</Text>
-            <View style={styles.ratingButtons}>
+          <View style={styles.ratingSheet}>
+            <Text style={styles.ratingTitle}>Оцените качество работы</Text>
+            <Text style={styles.ratingSubtitle}>Как сотрудник справился с задачей?</Text>
+            
+            <View style={styles.starsContainer}>
               {([1, 2, 3, 4, 5] as const).map((rating) => (
                 <TouchableOpacity
                   key={rating}
-                  style={styles.ratingStarButton}
+                  style={styles.starButton}
                   onPress={() => handleRate(task.id, rating)}
+                  activeOpacity={0.7}
                 >
-                  <View style={styles.starRow}>
-                    {Array.from({ length: rating }).map((_, i) => (
-                      <Star key={i} size={18} color="#F59E0B" fill="#F59E0B" strokeWidth={2} />
-                    ))}
-                  </View>
-                  <Text style={styles.ratingButtonText}>{rating}</Text>
+                  <Star 
+                    size={32} 
+                    color="#F59E0B" 
+                    fill="#F59E0B" 
+                    strokeWidth={2} 
+                  />
+                  <Text style={styles.starLabel}>{rating}</Text>
                 </TouchableOpacity>
               ))}
             </View>
+            
             <TouchableOpacity
               style={styles.cancelRatingButton}
               onPress={() => setRatingTaskId(null)}
@@ -1064,49 +1069,57 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: "center" as const,
   },
-  ratingContainer: {
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: "#F3F4F6",
-  },
-  ratingTitle: {
-    fontSize: 14,
-    fontWeight: "600" as const,
-    color: "#374151",
-    marginBottom: 12,
-  },
-  ratingButtons: {
-    flexDirection: "row" as const,
-    gap: 12,
-  },
-  ratingButton: {
-    flex: 1,
-    alignItems: "center" as const,
-    paddingVertical: 12,
+  ratingSheet: {
+    marginTop: 16,
+    padding: 16,
     backgroundColor: "#FFFBEB",
-    borderRadius: 10,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: "#FDE68A",
+    alignItems: "center",
   },
-  twoStars: {
-    flexDirection: "row" as const,
-    gap: 4,
-  },
-  ratingButtonText: {
-    fontSize: 12,
-    fontWeight: "500" as const,
+  ratingTitle: {
+    fontSize: 16,
+    fontWeight: "700",
     color: "#92400E",
-    marginTop: 4,
+    marginBottom: 4,
+  },
+  ratingSubtitle: {
+    fontSize: 13,
+    color: "#B45309",
+    marginBottom: 20,
+  },
+  starsContainer: {
+    flexDirection: "row",
+    gap: 16,
+    marginBottom: 16,
+  },
+  starButton: {
+    alignItems: "center",
+    gap: 8,
+    padding: 8,
+    borderRadius: 12,
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#F59E0B",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+    minWidth: 48,
+  },
+  starLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#D97706",
   },
   cancelRatingButton: {
-    alignItems: "center" as const,
-    paddingVertical: 10,
-    marginTop: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
   },
   cancelRatingText: {
     fontSize: 14,
-    color: "#6B7280",
+    color: "#92400E",
+    fontWeight: "500",
   },
   ratingDisplay: {
     flexDirection: "row" as const,

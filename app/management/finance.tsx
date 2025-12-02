@@ -9,6 +9,11 @@ import {
   TrendingDown,
   User as UserIcon,
   Award,
+  Edit2,
+  Save,
+  X,
+  TrendingUp,
+  DollarSign,
 } from "lucide-react-native";
 import { useMemo, useState } from "react";
 import {
@@ -25,7 +30,7 @@ import * as Sharing from "expo-sharing";
 import { File, Paths } from "expo-file-system";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useApp } from "@/providers/AppProvider";
-import { EMPLOYEE_POSITIONS, SalaryCalculation } from "@/types";
+import { SalaryCalculation, ALL_POSITIONS, Position } from "@/types";
 
 export default function FinanceScreen() {
   const {
@@ -40,6 +45,7 @@ export default function FinanceScreen() {
     addSalaryPayment,
     currentUser,
     getDirectorFinancialReport,
+    updateUser,
   } = useApp();
 
   const [selectedTab, setSelectedTab] = useState<"salary" | "advances" | "penalties" | "bonuses">("salary");
@@ -65,9 +71,27 @@ export default function FinanceScreen() {
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [showEndPicker, setShowEndPicker] = useState(false);
   const [expandedCards, setExpandedCards] = useState<Record<string, boolean>>({});
+  const [editingRateId, setEditingRateId] = useState<string | null>(null);
+  const [newRateValue, setNewRateValue] = useState("");
 
   const toggleCard = (employeeId: string) => {
     setExpandedCards((prev) => ({ ...prev, [employeeId]: !prev[employeeId] }));
+  };
+
+  const handleEditRate = (employeeId: string, currentRate: number) => {
+    setEditingRateId(employeeId);
+    setNewRateValue(currentRate.toString());
+  };
+
+  const handleSaveRate = (employeeId: string) => {
+    const rate = parseFloat(newRateValue);
+    if (isNaN(rate) || rate < 0) {
+        Alert.alert("Ошибка", "Введите корректную ставку");
+        return;
+    }
+    updateUser(employeeId, { hourlyRate: rate });
+    setEditingRateId(null);
+    setNewRateValue("");
   };
 
   const handleExportExcel = async () => {
@@ -121,7 +145,11 @@ export default function FinanceScreen() {
   };
 
   const employees = useMemo(
-    () => users.filter((u) => EMPLOYEE_POSITIONS.includes(u.position as typeof EMPLOYEE_POSITIONS[number])),
+    () => users.filter((u) => {
+        // Include Admins, Operators, Directors, and regular employees
+        if (u.role === "Учредитель") return false;
+        return ALL_POSITIONS.includes(u.position as Position);
+    }),
     [users]
   );
 
@@ -365,7 +393,30 @@ export default function FinanceScreen() {
             </View>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Ставка:</Text>
-              <Text style={styles.detailValue}>{salary.hourlyRate} сом/час</Text>
+              {editingRateId === salary.employeeId ? (
+                 <View style={styles.editRateContainer}>
+                    <TextInput 
+                        style={styles.editRateInput}
+                        value={newRateValue}
+                        onChangeText={setNewRateValue}
+                        keyboardType="decimal-pad"
+                        autoFocus
+                    />
+                    <TouchableOpacity onPress={() => handleSaveRate(salary.employeeId)} style={styles.saveRateButton}>
+                        <Save size={16} color="#15803D" />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => setEditingRateId(null)} style={styles.cancelRateButton}>
+                        <X size={16} color="#DC2626" />
+                    </TouchableOpacity>
+                 </View>
+              ) : (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Text style={styles.detailValue}>{salary.hourlyRate} сом/час</Text>
+                    <TouchableOpacity onPress={() => handleEditRate(salary.employeeId, salary.hourlyRate)}>
+                        <Edit2 size={14} color="#2563EB" />
+                    </TouchableOpacity>
+                </View>
+              )}
             </View>
             <View style={styles.detailRow}>
               <Text style={styles.detailLabel}>Базовая сумма:</Text>
@@ -549,26 +600,55 @@ export default function FinanceScreen() {
 
       {selectedTab === "salary" && (
         <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-          <View style={styles.summaryCard}>
-            <View style={styles.reportRow}>
-              <View style={styles.reportItem}>
-                 <Text style={styles.reportLabel}>План. расходы</Text>
-                 <Text style={styles.reportValue}>{formatCurrency(directorReport.plannedExpenses)}</Text>
+          <View style={styles.summaryGrid}>
+            <View style={styles.summaryCardNew}>
+              <View style={styles.summaryIconContainer}>
+                <TrendingUp size={24} color="#EF4444" strokeWidth={2} />
               </View>
-              <View style={styles.reportItem}>
-                 <Text style={styles.reportLabel}>Выплачено авансов</Text>
-                 <Text style={styles.reportValue}>{formatCurrency(directorReport.advancesPaid)}</Text>
-              </View>
+              <Text style={styles.summaryLabel}>Планируемые расходы</Text>
+              <Text style={styles.summaryValue}>
+                {formatCurrency(directorReport.plannedExpenses)}
+              </Text>
             </View>
-            <View style={[styles.reportRow, { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: "#BFDBFE" }]}>
-              <View style={styles.reportItem}>
-                 <Text style={styles.reportLabel}>Выплачено ЗП</Text>
-                 <Text style={styles.reportValue}>{formatCurrency(directorReport.salariesPaid)}</Text>
+
+            <View style={styles.summaryCardNew}>
+              <View style={styles.summaryIconContainer}>
+                <DollarSign size={24} color="#F59E0B" strokeWidth={2} />
               </View>
-              <View style={styles.reportItem}>
-                 <Text style={styles.reportLabel}>Остаток к выплате</Text>
-                 <Text style={[styles.reportValue, { color: "#1E40AF" }]}>{formatCurrency(directorReport.remainingToPay)}</Text>
+              <Text style={styles.summaryLabel}>Выплачено авансов</Text>
+              <Text style={styles.summaryValue}>
+                {formatCurrency(directorReport.advancesPaid)}
+              </Text>
+            </View>
+
+            <View style={styles.summaryCardNew}>
+              <View style={styles.summaryIconContainer}>
+                <DollarSign size={24} color="#10B981" strokeWidth={2} />
               </View>
+              <Text style={styles.summaryLabel}>Выплачено ЗП</Text>
+              <Text style={styles.summaryValue}>
+                {formatCurrency(directorReport.salariesPaid)}
+              </Text>
+            </View>
+
+            <View style={styles.summaryCardNew}>
+              <View style={styles.summaryIconContainer}>
+                <TrendingDown size={24} color="#3B82F6" strokeWidth={2} />
+              </View>
+              <Text style={styles.summaryLabel}>Осталось выплатить</Text>
+              <Text style={styles.summaryValue}>
+                {formatCurrency(directorReport.remainingToPay)}
+              </Text>
+            </View>
+
+             <View style={styles.summaryCardNew}>
+              <View style={styles.summaryIconContainer}>
+                <TrendingDown size={24} color="#8B5CF6" strokeWidth={2} />
+              </View>
+              <Text style={styles.summaryLabel}>Удержано штрафов</Text>
+              <Text style={styles.summaryValue}>
+                {formatCurrency(directorReport.penaltiesDeducted)}
+              </Text>
             </View>
           </View>
 
@@ -964,31 +1044,52 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#6B7280",
   },
-  summaryCard: {
-    backgroundColor: "#EFF6FF",
+  summaryGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+    marginBottom: 20,
+  },
+  summaryCardNew: {
+    width: "48%",
+    backgroundColor: "#FFFFFF",
     borderRadius: 12,
     padding: 16,
-    marginBottom: 20,
     borderWidth: 1,
-    borderColor: "#BFDBFE",
+    borderColor: "#E5E7EB",
   },
-  reportRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+  summaryIconContainer: {
+    marginBottom: 12,
   },
-  reportItem: {
-    flex: 1,
-  },
-  reportLabel: {
+  summaryLabel: {
     fontSize: 12,
-    color: "#60A5FA",
-    marginBottom: 4,
-    fontWeight: "500",
+    color: "#6B7280",
+    marginBottom: 8,
   },
-  reportValue: {
-    fontSize: 18,
+  summaryValue: {
+    fontSize: 16,
     fontWeight: "700",
-    color: "#1E3A8A",
+    color: "#111827",
+  },
+  editRateContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  editRateInput: {
+    width: 60,
+    padding: 4,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 4,
+    backgroundColor: "#FFFFFF",
+    fontSize: 13,
+  },
+  saveRateButton: {
+    padding: 4,
+  },
+  cancelRateButton: {
+    padding: 4,
   },
   salaryCard: {
     backgroundColor: "#FFFFFF",
