@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Табель Кассира",
-    "slug": "tabel-kassira",
+    "slug": "tabel-danek",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
