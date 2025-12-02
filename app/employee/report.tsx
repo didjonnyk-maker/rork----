@@ -19,6 +19,7 @@ import {
   TouchableOpacity,
   View,
   Platform,
+  KeyboardAvoidingView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useApp } from "@/providers/AppProvider";
@@ -137,6 +138,10 @@ export default function ReportScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["bottom"]}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
+      >
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.form}>
           <View style={styles.inputGroup}>
@@ -397,6 +402,7 @@ export default function ReportScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+      </KeyboardAvoidingView>
 
       <Modal
         visible={showSuccessModal}

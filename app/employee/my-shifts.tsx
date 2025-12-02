@@ -31,7 +31,10 @@ export default function MyShiftsScreen() {
 
   const myShifts = useMemo(() => {
     if (!currentUser) return [];
-    return getEmployeeShifts(currentUser.id).sort((a, b) => {
+    // Filter out closed shifts (they go to history)
+    const activeShifts = getEmployeeShifts(currentUser.id).filter(s => s.status !== "Закрыто" && s.status !== "Подтверждено");
+    
+    return activeShifts.sort((a, b) => {
       const dateA = new Date(a.date + " " + a.startTime);
       const dateB = new Date(b.date + " " + b.startTime);
       return dateA.getTime() - dateB.getTime();

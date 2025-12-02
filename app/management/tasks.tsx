@@ -23,6 +23,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  KeyboardAvoidingView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useApp } from "@/providers/AppProvider";
@@ -65,8 +66,23 @@ export default function TasksScreen() {
     if (selectedStatus !== "all") {
       result = result.filter((t) => t.status === selectedStatus);
     }
+    
+    // Director sees: All tasks for market (including Admin's).
+    // Admin sees: All tasks EXCEPT those assigned to Director.
+    if (currentUser?.role === "Администратор") {
+      result = result.filter(t => {
+         const assignee = users.find(u => u.id === t.assignedTo);
+         if (assignee?.role === "Директор") return false;
+         
+         const takenBy = users.find(u => u.id === t.takenBy);
+         if (takenBy?.role === "Директор") return false;
+         
+         return true;
+      });
+    }
+
     return result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [tasks, selectedStatus, selectedMarketId]);
+  }, [tasks, selectedStatus, selectedMarketId, currentUser, users]);
 
   const pendingReviewCount = useMemo(
     () => tasks.filter((t) => (t.status === "Выполнено" || t.status === "На модерации") && t.marketId === selectedMarketId).length,
@@ -547,6 +563,10 @@ export default function TasksScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["bottom"]}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
+      >
       <View style={styles.header}>
         {isDirector && (
             <View style={styles.marketSelector}>
@@ -739,6 +759,7 @@ export default function TasksScreen() {
           </View>
         )}
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

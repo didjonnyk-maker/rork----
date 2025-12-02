@@ -34,11 +34,11 @@ export default function AllShiftsScreen() {
   const filteredShifts = useMemo(() => {
     let result = [...shifts];
     
-    // Sort by date desc
+    // Sort by date asc (nearest first)
     result.sort((a, b) => {
       const dateA = new Date(a.date + " " + a.startTime);
       const dateB = new Date(b.date + " " + b.startTime);
-      return dateB.getTime() - dateA.getTime();
+      return dateA.getTime() - dateB.getTime();
     });
 
     if (activeFilter === "urgent") {

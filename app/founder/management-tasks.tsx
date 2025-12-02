@@ -11,7 +11,7 @@ import {
   Check,
 } from "lucide-react-native";
 import {
-  Alert,
+  KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
@@ -19,6 +19,7 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useApp } from "@/providers/AppProvider";
@@ -117,7 +118,7 @@ export default function FounderManagementTasksScreen() {
         return "#F59E0B";
       case "Выполнено":
       case "На модерации":
-        return "#8B5CF6";
+        return "#10B981"; // Green for completed/moderation in founder view
       case "Проверено":
         return "#10B981";
       case "Возвращено":
@@ -162,6 +163,10 @@ export default function FounderManagementTasksScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={["bottom"]}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
+      >
       <Stack.Screen
         options={{
           title: "Задачи для руководства",
@@ -370,7 +375,7 @@ export default function FounderManagementTasksScreen() {
                             <>
                                 <TouchableOpacity style={[styles.actionButton, styles.approveButton]} onPress={() => handleConfirmTask(task.id)}>
                                     <Check size={16} color="#FFFFFF" strokeWidth={2} />
-                                    <Text style={styles.actionButtonText}>Подтвердить</Text>
+                                    <Text style={styles.actionButtonText}>Ознакомлен</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity style={[styles.actionButton, styles.returnButton]} onPress={() => setReturningTaskId(task.id)}>
                                     <RefreshCcw size={16} color="#FFFFFF" strokeWidth={2} />
@@ -425,6 +430,7 @@ export default function FounderManagementTasksScreen() {
           )}
         </View>
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
