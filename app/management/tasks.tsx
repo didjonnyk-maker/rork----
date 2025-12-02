@@ -1,4 +1,5 @@
 import {
+  Calendar,
   CheckCircle,
   Circle,
   Clock,
@@ -125,6 +126,15 @@ export default function TasksScreen() {
   const [returnComment, setReturnComment] = useState("");
   const [returningTaskId, setReturningTaskId] = useState<string | null>(null);
 
+  const [schedulingTaskId, setSchedulingTaskId] = useState<string | null>(null);
+  const [scheduleDate, setScheduleDate] = useState("");
+
+  const [completingTaskId, setCompletingTaskId] = useState<string | null>(null);
+  const [completionText, setCompletionText] = useState("");
+
+  const [commentingTaskId, setCommentingTaskId] = useState<string | null>(null);
+  const [commentText, setCommentText] = useState("");
+
   const handleReturn = (taskId: string) => {
     if (!returnComment.trim()) {
       const msg = "Укажите комментарий для возврата";
@@ -172,6 +182,78 @@ export default function TasksScreen() {
     }
   };
 
+  const handleAcceptTask = (taskId: string) => {
+    if (!currentUser) return;
+    updateTask(taskId, { status: "В работе", takenBy: currentUser.id });
+    const msg = "Задание принято в работу";
+    if (Platform.OS === "web") {
+      alert(msg);
+    } else {
+      Alert.alert("Успешно", msg);
+    }
+  };
+
+  const handleSchedule = (taskId: string) => {
+    if (!scheduleDate.trim()) {
+      const msg = "Укажите дату исполнения";
+      if (Platform.OS === "web") {
+        alert(msg);
+      } else {
+        Alert.alert("Ошибка", msg);
+      }
+      return;
+    }
+    updateTask(taskId, { scheduledDate: scheduleDate.trim() });
+    setSchedulingTaskId(null);
+    setScheduleDate("");
+    const msg = "Дата исполнения запланирована";
+    if (Platform.OS === "web") {
+      alert(msg);
+    } else {
+      Alert.alert("Успешно", msg);
+    }
+  };
+
+  const handleComplete = (taskId: string) => {
+    if (!completionText.trim()) {
+      const msg = "Укажите результат выполнения";
+      if (Platform.OS === "web") {
+        alert(msg);
+      } else {
+        Alert.alert("Ошибка", msg);
+      }
+      return;
+    }
+    updateTask(taskId, { 
+      status: "Выполнено", 
+      resultText: completionText.trim(),
+      completedAt: new Date().toISOString()
+    });
+    setCompletingTaskId(null);
+    setCompletionText("");
+    const msg = "Задание выполнено";
+    if (Platform.OS === "web") {
+      alert(msg);
+    } else {
+      Alert.alert("Успешно", msg);
+    }
+  };
+
+  const handleAddComment = (taskId: string) => {
+    if (!commentText.trim()) {
+      return;
+    }
+    updateTask(taskId, { directorComment: commentText.trim() });
+    setCommentingTaskId(null);
+    setCommentText("");
+    const msg = "Комментарий добавлен";
+    if (Platform.OS === "web") {
+      alert(msg);
+    } else {
+      Alert.alert("Успешно", msg);
+    }
+  };
+
   const getAssigneeName = (assigneeId: string | undefined) => {
     if (!assigneeId) return "Не назначен";
     const user = users.find((u) => u.id === assigneeId);
@@ -202,6 +284,16 @@ export default function TasksScreen() {
     const canModerate = isCompleted && (currentUser?.position === "Администратор" || currentUser?.position === "Директор");
     const canCancel = task.createdBy === currentUser?.id && task.status !== "Проверено";
 
+    const creator = users.find(u => u.id === task.createdBy);
+    const isFounderTask = creator?.role === "Учредитель";
+    const isDirectorTask = currentUser?.position === "Директор" && (task.assignedTo === currentUser.id || (!task.assignedTo && task.status === "Доступно"));
+    
+    // Director actions on Founder tasks
+    const canAccept = isDirectorTask && isFounderTask && (task.status === "Новое" || task.status === "Доступно");
+    const canComplete = isDirectorTask && task.status === "В работе";
+    const canComment = isDirectorTask && isFounderTask;
+    const canSchedule = isDirectorTask && isFounderTask && !task.scheduledDate;
+
     return (
       <View key={task.id} style={[styles.taskCard, isCompleted && styles.taskCardHighlight]}>
         <View style={styles.taskHeader}>
@@ -217,10 +309,24 @@ export default function TasksScreen() {
           <Text style={styles.taskDescription}>{task.description}</Text>
         )}
 
+        {task.scheduledDate && (
+           <View style={styles.scheduledBadge}>
+             <Calendar size={12} color="#2563EB" strokeWidth={2} />
+             <Text style={styles.scheduledText}>Запланировано на: {task.scheduledDate}</Text>
+           </View>
+        )}
+
         {task.resultText && (
           <View style={styles.resultSection}>
             <Text style={styles.resultLabel}>Результат:</Text>
             <Text style={styles.resultText}>{task.resultText}</Text>
+          </View>
+        )}
+
+        {task.directorComment && (
+          <View style={styles.commentSection}>
+            <Text style={styles.commentLabel}>Комментарий Директора:</Text>
+            <Text style={styles.commentText}>{task.directorComment}</Text>
           </View>
         )}
 
@@ -252,6 +358,99 @@ export default function TasksScreen() {
             </View>
           )}
         </View>
+
+        {/* Director Actions */}
+        <View style={styles.directorActions}>
+            {canAccept && (
+              <TouchableOpacity style={[styles.actionButton, styles.acceptButton]} onPress={() => handleAcceptTask(task.id)}>
+                <Text style={styles.actionButtonText}>Принять в работу</Text>
+              </TouchableOpacity>
+            )}
+
+            {canComplete && completingTaskId !== task.id && (
+               <TouchableOpacity style={[styles.actionButton, styles.completeButton]} onPress={() => setCompletingTaskId(task.id)}>
+                 <Text style={styles.actionButtonText}>Завершить</Text>
+               </TouchableOpacity>
+            )}
+
+            {canComment && commentingTaskId !== task.id && !task.directorComment && (
+              <TouchableOpacity style={[styles.actionButton, styles.commentButton]} onPress={() => setCommentingTaskId(task.id)}>
+                 <Text style={[styles.actionButtonText, {color: "#374151"}]}>Комментарий</Text>
+               </TouchableOpacity>
+            )}
+
+             {canSchedule && schedulingTaskId !== task.id && (
+              <TouchableOpacity style={[styles.actionButton, styles.scheduleButton]} onPress={() => setSchedulingTaskId(task.id)}>
+                 <Text style={[styles.actionButtonText, {color: "#2563EB"}]}>Запланировать</Text>
+               </TouchableOpacity>
+            )}
+        </View>
+
+        {schedulingTaskId === task.id && (
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Дата исполнения (ДД.ММ.ГГГГ):</Text>
+             <TextInput
+              style={styles.inputField}
+              value={scheduleDate}
+              onChangeText={setScheduleDate}
+              placeholder="Например: 25.12.2023"
+              placeholderTextColor="#9CA3AF"
+            />
+            <View style={styles.inputActions}>
+              <TouchableOpacity style={[styles.inputButton, styles.confirmButton]} onPress={() => handleSchedule(task.id)}>
+                <Text style={styles.inputButtonText}>Сохранить</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.inputButton, styles.cancelButton]} onPress={() => { setSchedulingTaskId(null); setScheduleDate(""); }}>
+                <Text style={styles.cancelButtonText}>Отмена</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {completingTaskId === task.id && (
+           <View style={styles.inputContainer}>
+             <Text style={styles.inputLabel}>Результат выполнения:</Text>
+             <TextInput
+               style={[styles.inputField, styles.textArea]}
+               value={completionText}
+               onChangeText={setCompletionText}
+               placeholder="Опишите результат..."
+               placeholderTextColor="#9CA3AF"
+               multiline
+             />
+             <View style={styles.inputActions}>
+               <TouchableOpacity style={[styles.inputButton, styles.confirmButton]} onPress={() => handleComplete(task.id)}>
+                 <Text style={styles.inputButtonText}>Отправить</Text>
+               </TouchableOpacity>
+               <TouchableOpacity style={[styles.inputButton, styles.cancelButton]} onPress={() => { setCompletingTaskId(null); setCompletionText(""); }}>
+                 <Text style={styles.cancelButtonText}>Отмена</Text>
+               </TouchableOpacity>
+             </View>
+           </View>
+        )}
+
+        {commentingTaskId === task.id && (
+           <View style={styles.inputContainer}>
+             <Text style={styles.inputLabel}>Комментарий:</Text>
+             <TextInput
+               style={[styles.inputField, styles.textArea]}
+               value={commentText}
+               onChangeText={setCommentText}
+               placeholder="Ваш комментарий..."
+               placeholderTextColor="#9CA3AF"
+               multiline
+             />
+             <View style={styles.inputActions}>
+               <TouchableOpacity style={[styles.inputButton, styles.confirmButton]} onPress={() => handleAddComment(task.id)}>
+                 <Text style={styles.inputButtonText}>Сохранить</Text>
+               </TouchableOpacity>
+               <TouchableOpacity style={[styles.inputButton, styles.cancelButton]} onPress={() => { setCommentingTaskId(null); setCommentText(""); }}>
+                 <Text style={styles.cancelButtonText}>Отмена</Text>
+               </TouchableOpacity>
+             </View>
+           </View>
+        )}
+
 
         {canModerate && ratingTaskId !== task.id && returningTaskId !== task.id && (
           <View style={styles.actionButtons}>
@@ -994,5 +1193,112 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600" as const,
     color: "#DC2626",
+  },
+  directorActions: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: 12,
+  },
+  acceptButton: {
+    backgroundColor: "#15803D",
+  },
+  completeButton: {
+    backgroundColor: "#2563EB",
+  },
+  commentButton: {
+    backgroundColor: "#F3F4F6",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  scheduleButton: {
+    backgroundColor: "#EFF6FF",
+    borderWidth: 1,
+    borderColor: "#BFDBFE",
+  },
+  inputContainer: {
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: "#F9FAFB",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  inputLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#374151",
+    marginBottom: 8,
+  },
+  inputField: {
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 8,
+    padding: 10,
+    fontSize: 14,
+    color: "#111827",
+  },
+  textArea: {
+    minHeight: 80,
+    textAlignVertical: "top",
+  },
+  inputActions: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 12,
+  },
+  inputButton: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  confirmButton: {
+    backgroundColor: "#2563EB",
+  },
+  cancelButton: {
+    backgroundColor: "#F3F4F6",
+  },
+  inputButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#FFFFFF",
+  },
+  cancelButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#6B7280",
+  },
+  scheduledBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#EFF6FF",
+    padding: 8,
+    borderRadius: 6,
+    marginBottom: 10,
+    alignSelf: "flex-start",
+  },
+  scheduledText: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: "#2563EB",
+  },
+  commentSection: {
+    backgroundColor: "#F3F4F6",
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  commentLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#4B5563",
+    marginBottom: 4,
+  },
+  commentText: {
+    fontSize: 13,
+    color: "#374151",
   },
 });

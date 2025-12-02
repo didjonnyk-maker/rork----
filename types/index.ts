@@ -138,6 +138,7 @@ export interface Task {
   moderatedAt?: string;
   directorReviewed?: boolean;
   directorComment?: string;
+  scheduledDate?: string;
   cancelled?: boolean;
   cancelledAt?: string;
 }
