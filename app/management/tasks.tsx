@@ -48,8 +48,10 @@ export default function TasksScreen() {
   const [selectedMarketId, setSelectedMarketId] = useState<MarketId>(currentUser?.marketId || "danek");
   const isDirector = currentUser?.role === "Директор";
 
-  const employees = useMemo(
-    () => users.filter((u) => EMPLOYEE_POSITIONS.includes(u.position as typeof EMPLOYEE_POSITIONS[number])),
+  const targetEmployees = useMemo(
+    () => users.filter((u) => 
+      u.role === "Администратор" || u.role === "Операционист" || EMPLOYEE_POSITIONS.includes(u.position as typeof EMPLOYEE_POSITIONS[number])
+    ),
     [users]
   );
 
@@ -399,7 +401,7 @@ export default function TasksScreen() {
                       Доступно всем
                     </Text>
                   </TouchableOpacity>
-                  {employees.map((emp) => (
+                  {targetEmployees.map((emp) => (
                     <TouchableOpacity
                       key={emp.id}
                       style={[

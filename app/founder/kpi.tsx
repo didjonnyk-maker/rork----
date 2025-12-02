@@ -18,8 +18,7 @@ import { useApp } from "@/providers/AppProvider";
 import { EMPLOYEE_POSITIONS } from "@/types";
 
 export default function FounderKPIScreen() {
-  const { users, employeeKPIs, calculateKPICoefficient, kpiSettings } =
-    useApp();
+  const { users, employeeKPIs, calculateKPICoefficient } = useApp();
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
 
   const toggleCard = (employeeId: string) => {
@@ -92,41 +91,7 @@ export default function FounderKPIScreen() {
           </View>
         </View>
 
-        <View style={styles.weightsCard}>
-          <Text style={styles.weightsTitle}>Веса показателей</Text>
-          <View style={styles.weightsGrid}>
-            <View style={styles.weightItem}>
-              <Text style={styles.weightLabel}>Дисциплина</Text>
-              <Text style={styles.weightValue}>
-                {(kpiSettings.disciplineWeight * 100).toFixed(0)}%
-              </Text>
-            </View>
-            <View style={styles.weightItem}>
-              <Text style={styles.weightLabel}>Точность кассы</Text>
-              <Text style={styles.weightValue}>
-                {(kpiSettings.cashAccuracyWeight * 100).toFixed(0)}%
-              </Text>
-            </View>
-            <View style={styles.weightItem}>
-              <Text style={styles.weightLabel}>Без жалоб</Text>
-              <Text style={styles.weightValue}>
-                {(kpiSettings.noComplaintsWeight * 100).toFixed(0)}%
-              </Text>
-            </View>
-            <View style={styles.weightItem}>
-              <Text style={styles.weightLabel}>Обучение</Text>
-              <Text style={styles.weightValue}>
-                {(kpiSettings.trainingWeight * 100).toFixed(0)}%
-              </Text>
-            </View>
-            <View style={styles.weightItem}>
-              <Text style={styles.weightLabel}>Задачи</Text>
-              <Text style={styles.weightValue}>
-                {(kpiSettings.tasksWeight * 100).toFixed(0)}%
-              </Text>
-            </View>
-          </View>
-        </View>
+
 
         <View style={styles.employeesSection}>
           <Text style={styles.sectionTitle}>

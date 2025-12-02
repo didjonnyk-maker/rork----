@@ -65,20 +65,22 @@ export default function MaterialsScreen() {
   const [formAssignAll, setFormAssignAll] = useState(true);
   const [formAssignedGroups, setFormAssignedGroups] = useState<Position[]>([]);
 
-  const employees = useMemo(
-    () => users.filter((u) => EMPLOYEE_POSITIONS.includes(u.position as typeof EMPLOYEE_POSITIONS[number])),
+  const targetEmployees = useMemo(
+    () => users.filter((u) => 
+      u.role === "Администратор" || u.role === "Операционист" || EMPLOYEE_POSITIONS.includes(u.position as typeof EMPLOYEE_POSITIONS[number])
+    ),
     [users]
   );
 
   const getMaterialStats = (materialId: string, materialVersion: number) => {
-    const totalEmployees = employees.length;
+    const totalEmployees = targetEmployees.length;
     const viewedCount = trainingProgress.filter(
       (p) =>
         p.materialId === materialId &&
         p.completedAt &&
         p.materialVersion === materialVersion
     ).length;
-    const notViewedEmployees = employees.filter(
+    const notViewedEmployees = targetEmployees.filter(
       (emp) =>
         !trainingProgress.find(
           (p) =>
