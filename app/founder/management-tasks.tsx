@@ -7,6 +7,8 @@ import {
   Plus,
   XCircle,
   Send,
+  RefreshCcw,
+  Check,
 } from "lucide-react-native";
 import {
   Alert,
@@ -24,11 +26,13 @@ import { Task } from "@/types";
 import { useState } from "react";
 
 export default function FounderManagementTasksScreen() {
-  const { tasks, users, addTask, currentUser } = useApp();
+  const { tasks, users, addTask, updateTask, currentUser } = useApp();
   const [showAddForm, setShowAddForm] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState("");
   const [newTaskDescription, setNewTaskDescription] = useState("");
   const [newTaskAssignee, setNewTaskAssignee] = useState("");
+  const [returnComment, setReturnComment] = useState("");
+  const [returningTaskId, setReturningTaskId] = useState<string | null>(null);
 
   const managementUsers = users.filter((u) => u.role === "Директор" || u.role === "Администратор");
 
@@ -36,6 +40,37 @@ export default function FounderManagementTasksScreen() {
     const user = users.find((u) => u.id === t.assignedTo || u.id === t.takenBy);
     return user && (user.role === "Директор" || user.role === "Администратор");
   });
+
+  const handleConfirmTask = (taskId: string) => {
+      updateTask(taskId, { status: "Проверено", verifiedBy: currentUser?.id, verifiedAt: new Date().toISOString() });
+      const msg = "Задание подтверждено";
+      if (Platform.OS === "web") {
+        alert(msg);
+      } else {
+        Alert.alert("Успешно", msg);
+      }
+  };
+
+  const handleReturnTask = (taskId: string) => {
+      if (!returnComment.trim()) {
+        const msg = "Укажите причину возврата";
+        if (Platform.OS === "web") {
+          alert(msg);
+        } else {
+          Alert.alert("Ошибка", msg);
+        }
+        return;
+      }
+      updateTask(taskId, { status: "Возвращено", returnComment: returnComment.trim() });
+      setReturningTaskId(null);
+      setReturnComment("");
+      const msg = "Задание возвращено на доработку";
+      if (Platform.OS === "web") {
+        alert(msg);
+      } else {
+        Alert.alert("Успешно", msg);
+      }
+  };
 
   const handleAddTask = () => {
     if (!newTaskTitle.trim()) {
@@ -329,6 +364,43 @@ export default function FounderManagementTasksScreen() {
                     </View>
                   )}
 
+                  {task.status === "Выполнено" && (
+                     <View style={styles.actionButtons}>
+                        {returningTaskId !== task.id ? (
+                            <>
+                                <TouchableOpacity style={[styles.actionButton, styles.approveButton]} onPress={() => handleConfirmTask(task.id)}>
+                                    <Check size={16} color="#FFFFFF" strokeWidth={2} />
+                                    <Text style={styles.actionButtonText}>Подтвердить</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity style={[styles.actionButton, styles.returnButton]} onPress={() => setReturningTaskId(task.id)}>
+                                    <RefreshCcw size={16} color="#FFFFFF" strokeWidth={2} />
+                                    <Text style={styles.actionButtonText}>Вернуть</Text>
+                                </TouchableOpacity>
+                            </>
+                        ) : (
+                             <View style={styles.returnContainer}>
+                                <Text style={styles.returnLabel}>Причина возврата:</Text>
+                                <TextInput
+                                    style={styles.returnInput}
+                                    value={returnComment}
+                                    onChangeText={setReturnComment}
+                                    placeholder="Комментарий..."
+                                    placeholderTextColor="#9CA3AF"
+                                    multiline
+                                />
+                                <View style={styles.returnActions}>
+                                    <TouchableOpacity style={[styles.actionButton, styles.returnButton]} onPress={() => handleReturnTask(task.id)}>
+                                        <Text style={styles.actionButtonText}>Отправить</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity style={[styles.actionButton, styles.cancelButton]} onPress={() => { setReturningTaskId(null); setReturnComment(""); }}>
+                                        <Text style={styles.cancelButtonText}>Отмена</Text>
+                                    </TouchableOpacity>
+                                </View>
+                             </View>
+                        )}
+                     </View>
+                  )}
+
                   {task.rating && (
                     <View style={styles.ratingContainer}>
                       <Text style={styles.ratingLabel}>Оценка:</Text>
@@ -609,5 +681,67 @@ const styles = StyleSheet.create({
     color: "#9CA3AF",
     marginTop: 16,
     textAlign: "center",
+  },
+  actionButtons: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: "#F3F4F6",
+  },
+  actionButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  approveButton: {
+    backgroundColor: "#10B981",
+  },
+  returnButton: {
+    backgroundColor: "#EF4444",
+  },
+  cancelButton: {
+    backgroundColor: "#F3F4F6",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  actionButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#FFFFFF",
+  },
+  cancelButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#374151",
+  },
+  returnContainer: {
+    flex: 1,
+    gap: 8,
+  },
+  returnLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#374151",
+  },
+  returnInput: {
+    backgroundColor: "#F9FAFB",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 8,
+    padding: 10,
+    fontSize: 14,
+    color: "#111827",
+    minHeight: 60,
+    textAlignVertical: "top",
+  },
+  returnActions: {
+    flexDirection: "row",
+    gap: 8,
   },
 });

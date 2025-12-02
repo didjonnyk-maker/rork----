@@ -281,12 +281,13 @@ export default function TasksScreen() {
     
     const config = STATUS_CONFIG[task.status];
     const isCompleted = task.status === "Выполнено" || task.status === "На модерации";
+    const isInProgress = task.status === "В работе";
     const canModerate = isCompleted && (currentUser?.position === "Администратор" || currentUser?.position === "Директор");
     const canCancel = task.createdBy === currentUser?.id && task.status !== "Проверено";
 
     const creator = users.find(u => u.id === task.createdBy);
     const isFounderTask = creator?.role === "Учредитель";
-    const isDirectorTask = currentUser?.position === "Директор" && (task.assignedTo === currentUser.id || (!task.assignedTo && task.status === "Доступно"));
+    const isDirectorTask = currentUser?.position === "Директор" && (task.assignedTo === currentUser.id || (!task.assignedTo && task.status === "Доступно") || task.takenBy === currentUser.id);
     
     // Director actions on Founder tasks
     const canAccept = isDirectorTask && isFounderTask && (task.status === "Новое" || task.status === "Доступно");
@@ -295,7 +296,11 @@ export default function TasksScreen() {
     const canSchedule = isDirectorTask && isFounderTask && !task.scheduledDate;
 
     return (
-      <View key={task.id} style={[styles.taskCard, isCompleted && styles.taskCardHighlight]}>
+      <View key={task.id} style={[
+        styles.taskCard, 
+        isCompleted && styles.taskCardHighlight,
+        isInProgress && styles.taskCardInProgress
+      ]}>
         <View style={styles.taskHeader}>
           <View style={[styles.statusBadge, { backgroundColor: config.bgColor }]}>
             {config.icon}
@@ -942,6 +947,12 @@ const styles = StyleSheet.create({
     borderColor: "#FDE68A",
     backgroundColor: "#FFFBEB",
   },
+  taskCardInProgress: {
+    borderColor: "#BFDBFE",
+    backgroundColor: "#EFF6FF",
+    borderLeftWidth: 4,
+    borderLeftColor: "#2563EB",
+  },
   taskHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -1204,7 +1215,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#15803D",
   },
   completeButton: {
-    backgroundColor: "#2563EB",
+    backgroundColor: "#16A34A",
   },
   commentButton: {
     backgroundColor: "#F3F4F6",

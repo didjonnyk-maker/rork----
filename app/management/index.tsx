@@ -10,6 +10,8 @@ import {
   LayoutDashboard,
   LogOut,
   Star,
+  Plus,
+  Repeat,
 } from "lucide-react-native";
 import {
   StyleSheet,
@@ -86,6 +88,24 @@ export default function ManagementScreen() {
           <Calendar size={22} color="#2563EB" strokeWidth={2} />
           <Text style={styles.actionGridText}>Все смены</Text>
         </TouchableOpacity>
+        {currentUser?.position === "Директор" && (
+          <TouchableOpacity
+            style={styles.actionGridButton}
+            onPress={() => router.push("/management/add-shift" as never)}
+          >
+            <Plus size={22} color="#2563EB" strokeWidth={2} />
+            <Text style={styles.actionGridText}>Добавить смену</Text>
+          </TouchableOpacity>
+        )}
+        {currentUser?.position === "Директор" && (
+          <TouchableOpacity
+            style={styles.actionGridButton}
+            onPress={() => router.push("/management/shift-templates" as never)}
+          >
+            <Repeat size={22} color="#2563EB" strokeWidth={2} />
+            <Text style={styles.actionGridText}>Шаблоны</Text>
+          </TouchableOpacity>
+        )}
         {currentUser?.position === "Директор" && (
           <TouchableOpacity
             style={styles.actionGridButton}
