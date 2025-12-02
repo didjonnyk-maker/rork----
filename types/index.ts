@@ -138,6 +138,8 @@ export interface Task {
   moderatedAt?: string;
   directorReviewed?: boolean;
   directorComment?: string;
+  cancelled?: boolean;
+  cancelledAt?: string;
 }
 
 export interface SalaryPayment {
@@ -285,6 +287,34 @@ export interface EmployeeShiftActivity {
   arrivedAt?: string;
   closedAt?: string;
   closedByEmployee?: boolean;
+}
+
+export interface ShiftTimeReport {
+  id: string;
+  shiftId: string;
+  employeeId: string;
+  employeeName: string;
+  position: Position;
+  marketId: MarketId;
+  date: string;
+  reportedStartTime: string;
+  reportedEndTime: string;
+  actualHours: number;
+  createdAt: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  approved?: boolean;
+  notes?: string;
+}
+
+export interface HourAdjustment {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  hours: number;
+  reason: string;
+  date: string;
+  createdBy: string;
 }
 
 export interface CashierReportModeration {

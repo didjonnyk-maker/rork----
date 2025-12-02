@@ -24,6 +24,8 @@ import {
   DEFAULT_HOURLY_RATE,
   SHIFT_CANCEL_PENALTY,
   REPLACEMENT_RATE_MULTIPLIER,
+  ShiftTimeReport,
+  HourAdjustment,
 } from "@/types";
 
 const STORAGE_KEYS = {
@@ -43,6 +45,8 @@ const STORAGE_KEYS = {
   TRAINING_PROGRESS: "@tabel_training_progress",
   SALARY_PAYMENTS: "@tabel_salary_payments",
   BONUSES: "@tabel_bonuses",
+  SHIFT_TIME_REPORTS: "@tabel_shift_time_reports",
+  HOUR_ADJUSTMENTS: "@tabel_hour_adjustments",
 };
 
 export const [AppProvider, useApp] = createContextHook(() => {
@@ -68,6 +72,8 @@ export const [AppProvider, useApp] = createContextHook(() => {
   const [trainingMaterials, setTrainingMaterials] = useState<TrainingMaterial[]>([]);
   const [trainingProgress, setTrainingProgress] = useState<EmployeeTrainingProgress[]>([]);
   const [salaryPayments, setSalaryPayments] = useState<SalaryPayment[]>([]);
+  const [shiftTimeReports, setShiftTimeReports] = useState<ShiftTimeReport[]>([]);
+  const [hourAdjustments, setHourAdjustments] = useState<HourAdjustment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -93,6 +99,8 @@ export const [AppProvider, useApp] = createContextHook(() => {
         trainingProgressData,
         salaryPaymentsData,
         bonusesData,
+        shiftTimeReportsData,
+        hourAdjustmentsData,
       ] = await Promise.all([
         AsyncStorage.getItem(STORAGE_KEYS.USERS),
         AsyncStorage.getItem(STORAGE_KEYS.SHIFTS),
@@ -110,6 +118,8 @@ export const [AppProvider, useApp] = createContextHook(() => {
         AsyncStorage.getItem(STORAGE_KEYS.TRAINING_PROGRESS),
         AsyncStorage.getItem(STORAGE_KEYS.SALARY_PAYMENTS),
         AsyncStorage.getItem(STORAGE_KEYS.BONUSES),
+        AsyncStorage.getItem(STORAGE_KEYS.SHIFT_TIME_REPORTS),
+        AsyncStorage.getItem(STORAGE_KEYS.HOUR_ADJUSTMENTS),
       ]);
 
       if (usersData) setUsers(JSON.parse(usersData));
@@ -128,6 +138,8 @@ export const [AppProvider, useApp] = createContextHook(() => {
       if (trainingProgressData) setTrainingProgress(JSON.parse(trainingProgressData));
       if (salaryPaymentsData) setSalaryPayments(JSON.parse(salaryPaymentsData));
       if (bonusesData) setBonuses(JSON.parse(bonusesData));
+      if (shiftTimeReportsData) setShiftTimeReports(JSON.parse(shiftTimeReportsData));
+      if (hourAdjustmentsData) setHourAdjustments(JSON.parse(hourAdjustmentsData));
     } catch (error) {
       console.error("Error loading data:", error);
     } finally {
@@ -1262,6 +1274,62 @@ export const [AppProvider, useApp] = createContextHook(() => {
     return false;
   }, [users, login]);
 
+  const saveShiftTimeReports = useCallback(async (newReports: ShiftTimeReport[]) => {
+    try {
+      await AsyncStorage.setItem(STORAGE_KEYS.SHIFT_TIME_REPORTS, JSON.stringify(newReports));
+      setShiftTimeReports(newReports);
+    } catch (error) {
+      console.error("Error saving shift time reports:", error);
+    }
+  }, []);
+
+  const addShiftTimeReport = useCallback(
+    (report: ShiftTimeReport) => {
+      const newReports = [...shiftTimeReports, report];
+      saveShiftTimeReports(newReports);
+    },
+    [shiftTimeReports, saveShiftTimeReports]
+  );
+
+  const updateShiftTimeReport = useCallback(
+    (reportId: string, updates: Partial<ShiftTimeReport>) => {
+      const newReports = shiftTimeReports.map((r) =>
+        r.id === reportId ? { ...r, ...updates } : r
+      );
+      saveShiftTimeReports(newReports);
+    },
+    [shiftTimeReports, saveShiftTimeReports]
+  );
+
+  const saveHourAdjustments = useCallback(async (newAdjustments: HourAdjustment[]) => {
+    try {
+      await AsyncStorage.setItem(STORAGE_KEYS.HOUR_ADJUSTMENTS, JSON.stringify(newAdjustments));
+      setHourAdjustments(newAdjustments);
+    } catch (error) {
+      console.error("Error saving hour adjustments:", error);
+    }
+  }, []);
+
+  const addHourAdjustment = useCallback(
+    (adjustment: HourAdjustment) => {
+      const newAdjustments = [...hourAdjustments, adjustment];
+      saveHourAdjustments(newAdjustments);
+    },
+    [hourAdjustments, saveHourAdjustments]
+  );
+
+  const cancelTask = useCallback(
+    (taskId: string) => {
+      const newTasks = tasks.map((task) =>
+        task.id === taskId
+          ? { ...task, cancelled: true, cancelledAt: new Date().toISOString() }
+          : task
+      );
+      saveTasks(newTasks);
+    },
+    [tasks, saveTasks]
+  );
+
   return {
     users,
     shifts,
@@ -1345,5 +1413,11 @@ export const [AppProvider, useApp] = createContextHook(() => {
     deleteShift,
     addSalaryPayment,
     salaryPayments,
+    shiftTimeReports,
+    addShiftTimeReport,
+    updateShiftTimeReport,
+    hourAdjustments,
+    addHourAdjustment,
+    cancelTask,
   };
 });

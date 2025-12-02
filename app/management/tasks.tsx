@@ -10,6 +10,7 @@ import {
   User as UserIcon,
   XCircle,
   Store,
+  Trash2,
 } from "lucide-react-native";
 import React, { useMemo, useState } from "react";
 import {
@@ -37,7 +38,7 @@ const STATUS_CONFIG: Record<TaskStatus, { color: string; bgColor: string; icon: 
 };
 
 export default function TasksScreen() {
-  const { users, tasks, addTask, updateTask, rateTask, currentUser } = useApp();
+  const { users, tasks, addTask, updateTask, rateTask, cancelTask, currentUser } = useApp();
 
   const [showAddForm, setShowAddForm] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState("");
@@ -145,6 +146,32 @@ export default function TasksScreen() {
     }
   };
 
+  const handleCancelTask = (taskId: string) => {
+    const msg = "Вы уверены, что хотите отозвать это задание?";
+    if (Platform.OS === "web") {
+      if (confirm(msg)) {
+        cancelTask(taskId);
+        alert("Задание отозвано");
+      }
+    } else {
+      Alert.alert(
+        "Отозвать задание",
+        msg,
+        [
+          { text: "Отмена", style: "cancel" },
+          { 
+            text: "Отозвать", 
+            style: "destructive",
+            onPress: () => {
+              cancelTask(taskId);
+              Alert.alert("Успешно", "Задание отозвано");
+            }
+          },
+        ]
+      );
+    }
+  };
+
   const getAssigneeName = (assigneeId: string | undefined) => {
     if (!assigneeId) return "Не назначен";
     const user = users.find((u) => u.id === assigneeId);
@@ -168,9 +195,12 @@ export default function TasksScreen() {
   };
 
   const renderTaskCard = (task: Task) => {
+    if (task.cancelled) return null;
+    
     const config = STATUS_CONFIG[task.status];
     const isCompleted = task.status === "Выполнено" || task.status === "На модерации";
     const canModerate = isCompleted && (currentUser?.position === "Администратор" || currentUser?.position === "Директор");
+    const canCancel = task.createdBy === currentUser?.id && task.status !== "Проверено";
 
     return (
       <View key={task.id} style={[styles.taskCard, isCompleted && styles.taskCardHighlight]}>
@@ -296,6 +326,16 @@ export default function TasksScreen() {
               <Text style={styles.cancelRatingText}>Отмена</Text>
             </TouchableOpacity>
           </View>
+        )}
+
+        {canCancel && (
+          <TouchableOpacity
+            style={styles.cancelTaskButton}
+            onPress={() => handleCancelTask(task.id)}
+          >
+            <Trash2 size={16} color="#DC2626" strokeWidth={2} />
+            <Text style={styles.cancelTaskButtonText}>Отозвать задание</Text>
+          </TouchableOpacity>
         )}
       </View>
     );
@@ -936,5 +976,23 @@ const styles = StyleSheet.create({
   starRow: {
     flexDirection: "row" as const,
     gap: 1,
+  },
+  cancelTaskButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginTop: 12,
+    borderRadius: 8,
+    backgroundColor: "#FEF2F2",
+    borderWidth: 1,
+    borderColor: "#FEE2E2",
+  },
+  cancelTaskButtonText: {
+    fontSize: 13,
+    fontWeight: "600" as const,
+    color: "#DC2626",
   },
 });

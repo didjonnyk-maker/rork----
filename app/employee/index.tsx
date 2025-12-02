@@ -150,7 +150,7 @@ export default function EmployeeScreen() {
           <Text style={styles.actionButtonText}>Мои смены ({myShifts.length})</Text>
         </TouchableOpacity>
 
-        {currentUser?.position === "Кассир" && (
+        {(currentUser?.position === "Кассир" || currentUser?.position === "Универсал") && (
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => router.push("/employee/report" as never)}
@@ -160,7 +160,7 @@ export default function EmployeeScreen() {
           </TouchableOpacity>
         )}
 
-        {currentUser?.position === "Кассир" && (
+        {(currentUser?.position === "Кассир" || currentUser?.position === "Универсал") && (
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => router.push("/employee/report-history" as never)}
