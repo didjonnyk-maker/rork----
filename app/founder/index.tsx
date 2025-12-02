@@ -6,11 +6,11 @@ import {
   Eye,
   FileText,
   LogOut,
-  TrendingUp,
   Users,
   Calendar,
   Store,
   Award,
+  UserCog,
 } from "lucide-react-native";
 import { useState } from "react";
 import {
@@ -89,12 +89,6 @@ export default function FounderDashboardScreen() {
 
   const menuItems = [
     {
-      title: "Дашборд",
-      description: "Текущее состояние смен",
-      icon: <TrendingUp size={24} color="#2563EB" strokeWidth={2} />,
-      onPress: () => router.push("/founder/dashboard" as never),
-    },
-    {
       title: "История смен",
       description: "Просмотр прошлых смен",
       icon: <FileText size={24} color="#059669" strokeWidth={2} />,
@@ -113,10 +107,16 @@ export default function FounderDashboardScreen() {
       onPress: () => router.push("/founder/kpi" as never),
     },
     {
-      title: "Задачи",
+      title: "Задачи сотрудников",
       description: "Все задания сотрудников",
       icon: <ClipboardList size={24} color="#EC4899" strokeWidth={2} />,
       onPress: () => router.push("/founder/tasks" as never),
+    },
+    {
+      title: "Задачи для руководства",
+      description: "Задания для Директора и Администраторов",
+      icon: <UserCog size={24} color="#DC2626" strokeWidth={2} />,
+      onPress: () => router.push("/founder/management-tasks" as never),
     },
   ];
 
